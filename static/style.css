@@ -1,0 +1,22 @@
+.navbar-brand > img {
+    max-height: 100%;
+    height: 100%;
+    width: auto;
+    margin: 0 auto;
+}
+
+.navbar-brand,
+.navbar-nav li a {
+    line-height: 80px;
+    height: 80px;
+    padding-top: 0;
+}
+
+body {
+    padding-top: 100px;
+    padding-bottom: 20px;
+}
+
+.navbar {
+  margin-bottom: 20px;
+}
