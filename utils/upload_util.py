@@ -1,7 +1,8 @@
 import os
 from config import config_reader
-from utils import config_ops
 from shutil import copyfile
+
+from utils.profile import define_new_config_file
 
 
 def existing_data(form, user_configs, username, sess, APP_ROOT):
@@ -13,7 +14,7 @@ def existing_data(form, user_configs, username, sess, APP_ROOT):
         sess.load_config()
         return 'parameters'
     else:
-        config_name = config_ops.define_new_config_file(dataset_name, APP_ROOT, username, sess.get_writer())
+        config_name = define_new_config_file(dataset_name, APP_ROOT, username)
         sess.set('config_file', os.path.join(path, config_name, 'config.ini'))
         if user_configs[dataset_name] and os.path.isfile(
                 os.path.join(path, user_configs[dataset_name][0], 'config.ini')):
@@ -36,9 +37,7 @@ def generate_dataset_name(app_root, username, dataset_name):
     if os.path.isdir(os.path.join(app_root, 'user_data', username)):
         user_datasets = [a for a in os.listdir(os.path.join(app_root, 'user_data', username))
                          if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
-    cont = 1
-    while dataset_name + '_' + str(cont) in user_datasets:
-        cont += 1
-    new_dataset_name = dataset_name + '_' + str(cont)
-    return new_dataset_name
 
+    latest = max([conf_name.rsplit('_')[1] for conf_name in user_datasets])
+    new_dataset_name = dataset_name + '_' + str(latest + 1)
+    return new_dataset_name
