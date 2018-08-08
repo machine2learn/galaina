@@ -14,6 +14,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 
 from utils import profile
 from utils.db_ops import checklogin
+from utils.profile import new_config
 
 app = Flask(__name__)
 app.secret_key = 'amir'
@@ -26,14 +27,10 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-ALLOWED_EXTENSIONS = ['csv']
 
 sess = Session(app)
 
 
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.route('/')
@@ -48,10 +45,7 @@ def upload():
     upload_page = '/upload_file_new_form.html' if user_configs else '/upload_file_first_form.html'
 
     if request.method == 'POST':
-        for filename, file in request.files.items():
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        new_config(request.form.datasetname, request.files.items(), APP_ROOT, session['user'], sess)
         return redirect(url_for('next'))
     return render_template(upload_page, page=0)
     # return redirect(upload_page)

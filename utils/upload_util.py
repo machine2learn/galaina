@@ -32,12 +32,3 @@ def existing_data(form, user_configs, username, sess, APP_ROOT):
         return 'slider'
 
 
-def generate_dataset_name(app_root, username, dataset_name):
-    user_datasets = []
-    if os.path.isdir(os.path.join(app_root, 'user_data', username)):
-        user_datasets = [a for a in os.listdir(os.path.join(app_root, 'user_data', username))
-                         if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
-
-    latest = max([conf_name.rsplit('_')[1] for conf_name in user_datasets])
-    new_dataset_name = dataset_name + '_' + str(latest + 1)
-    return new_dataset_name

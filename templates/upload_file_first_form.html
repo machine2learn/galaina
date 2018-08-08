@@ -15,6 +15,12 @@
         <th1>Data Upload</th1>
     </div>
     <div class="row">
+        <div class="'col-lg-2">
+            <label for="username">Dataset name</label>
+            <input type="text" id="datasetname">
+        </div>
+    </div>
+    <div class="row top-buffer">
         <div class="'col-lg-1">
             <button type="button" id="addRow">Add input row</button>
             <button type="button" id="removeRow">Remove selected rows</button>
@@ -33,7 +39,9 @@
                 </table>
             </div>
         </div>
-     <input type="submit" value="Submit">
+        <div class="row">
+            <input type="submit" value="Submit">
+        </div>
     </form>
 {% endblock %}
 

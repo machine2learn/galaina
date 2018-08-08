@@ -3,9 +3,19 @@ import os
 
 from werkzeug.utils import secure_filename
 
+
 USER_DATA = 'user_data'
+ALLOWED_EXTENSIONS = ['csv']
 
+def generate_dataset_name(app_root, username, dataset_name):
+    user_datasets = []
+    if os.path.isdir(os.path.join(app_root, 'user_data', username)):
+        user_datasets = [a for a in os.listdir(os.path.join(app_root, 'user_data', username))
+                         if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
 
+    latest = max([conf_name.rsplit('_')[1] for conf_name in user_datasets])
+    new_dataset_name = dataset_name + '_' + str(latest + 1)
+    return new_dataset_name
 
 
 def get_configs_files(app_root, username):
@@ -56,36 +66,30 @@ def define_new_config_file(dataset_name, APP_ROOT, username):
     create_config(username, APP_ROOT, dataset_name, config_name)
     return config_name
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def save_filename(target, dataset_form_field, dataset_name):
-    dataset_form_field.filename = dataset_name + '.csv'
-    dataset_file = dataset_form_field
-    if dataset_file:
-        dataset_filename = secure_filename(dataset_file.filename)
-        destination = os.path.join(target, dataset_filename)
-        dataset_file.save(destination)
+def save_files(target, files, dataset_name):
+    for filename, file in files.items():
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            destination = os.path.join(target, file.filename)
+            file.save(destination, filename)
     return True
 
-def new_config(train_form_file, test_form_file, APP_ROOT, username, sess):
-    ext = train_form_file.filename.split('.')[-1]
-    dataset_name = train_form_file.filename.split('.' + ext)[0]
+
+def new_config(dataset_name, filenames, APP_ROOT, username, sess):
     if os.path.isdir(os.path.join(APP_ROOT, USER_DATA, username, dataset_name)):
-        dataset_name = upload_util.generate_dataset_name(APP_ROOT, username, dataset_name)
+        dataset_name = generate_dataset_name(APP_ROOT, username, dataset_name)
 
     config_name = define_new_config_file(dataset_name, APP_ROOT, username, sess.get_writer())
     sess.set('config_file', create_config(username, APP_ROOT, dataset_name, config_name))
     path = os.path.join(APP_ROOT, USER_DATA, username, dataset_name)
+    save_files(path, filenames, dataset_name, sess)
 
-    save_filename(path, train_form_file, 'train_file', dataset_name, sess)
-    sess.get_writer().add_item('PATHS', 'train_file', os.path.join(path, train_form_file.filename))
-    sess.get_writer().add_item('PATHS', 'file', os.path.join(path, train_form_file.filename))
-    sess.set('file', os.path.join(path, train_form_file.filename))
-    if not isinstance(test_form_file, str):
-        ext = test_form_file.filename.split('.')[-1]
-        test_file = test_form_file.filename.split('.' + ext)[0]
-        save_filename(path, test_form_file, 'validation_file', test_file, sess)
-        sess.get_writer().add_item('PATHS', 'validation_file', os.path.join(path, test_form_file.filename))
-        sess.get_writer().write_config(sess.get('config_file'))
-        return 'feature'
-    sess.get_writer().write_config(sess.get('config_file'))
+    # sess.get_writer().add_item('PATHS', 'train_file', os.path.join(path, train_form_file.filename))
+    # sess.get_writer().add_item('PATHS', 'file', os.path.join(path, train_form_file.filename))
+    # sess.set('file', os.path.join(path, train_form_file.filename))
+    # sess.get_writer().write_config(sess.get('config_file'))
     return 'slider'
