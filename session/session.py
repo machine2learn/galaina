@@ -1,6 +1,10 @@
+import os
+
 from flask import session, redirect, url_for
 
 from config.config_writer import ConfigWriter
+
+CONFING_NAME = 'config.ini'
 
 
 class Session:
@@ -11,15 +15,22 @@ class Session:
 
     def add_user(self, user):
         self._config[user] = {}
-        self._config_writer[user] = ConfigWriter()
 
     def reset_user(self):
         user = self.get_session('user')
         self._config[user] = {}
-        self._config_writer[user] = ConfigWriter()
 
     def get_session(self, user_id):
         with self._app.app_context():
             if user_id not in session:
                 return redirect(url_for('login'))
             return session[user_id]
+
+    def create_config(self, path, name):
+        user = self.get_session('user')
+        config_path = os.path.join(path, CONFING_NAME)
+        self._config_writer[user] = ConfigWriter(config_path, name)
+
+    def get_writer(self):
+        user = self.get_session('user')
+        return self._config_writer[user]

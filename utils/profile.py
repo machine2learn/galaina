@@ -3,19 +3,26 @@ import os
 
 from werkzeug.utils import secure_filename
 
+from config.config_writer import ConfigWriter
 
 USER_DATA = 'user_data'
 ALLOWED_EXTENSIONS = ['csv']
 
-def generate_dataset_name(app_root, username, dataset_name):
+
+def generate_dataset_name(app_root, username, datasetname):
+    datasetname = datasetname or 'dataset'
     user_datasets = []
     if os.path.isdir(os.path.join(app_root, 'user_data', username)):
         user_datasets = [a for a in os.listdir(os.path.join(app_root, 'user_data', username))
                          if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
 
-    latest = max([conf_name.rsplit('_')[1] for conf_name in user_datasets])
-    new_dataset_name = dataset_name + '_' + str(latest + 1)
-    return new_dataset_name
+    latest = 1
+    if datasetname in user_datasets:
+        datasets = [conf_name.split(datasetname + '_')[1] for conf_name in user_datasets]
+        if datasets:
+            latest = max(datasets) + 1
+
+    return datasetname + '_' + str(latest)
 
 
 def get_configs_files(app_root, username):
@@ -43,10 +50,10 @@ def copyfile(src, dst):
     if os.path.exists(src): copyfile(src, dst)
 
 
-def create_config(username, APP_ROOT, dataset, config_name):
+def create_config(username, APP_ROOT, dataset, config_name, sess):
     path = os.path.join(APP_ROOT, USER_DATA, username, dataset, config_name)
     os.makedirs(path, exist_ok=True)
-    return path + '/config.ini'
+    sess.create_config(path, config_name)
 
 
 def generate_config_name(app_root, username, dataset_name):
@@ -54,42 +61,42 @@ def generate_config_name(app_root, username, dataset_name):
     if os.path.isdir(os.path.join(app_root, USER_DATA, username, dataset_name)):
         user_configs = [a for a in os.listdir(os.path.join(app_root, USER_DATA, username, dataset_name))
                         if os.path.isdir(os.path.join(app_root, USER_DATA, username, dataset_name, a))]
-    latest = max([conf_name.rsplit('_')[1] for conf_name in user_configs])
-    return 'config_' + str(latest + 1)
+    dataset_configs = [int(conf_name.rsplit('_')[1]) for conf_name in user_configs]
+    latest = 1 if not dataset_configs else max(dataset_configs) + 1
+    return 'config_' + str(latest)
 
 
-def define_new_config_file(dataset_name, APP_ROOT, username):
+def define_new_config_file(dataset_name, APP_ROOT, username, sess):
     config_name = generate_config_name(APP_ROOT, username, dataset_name)
     target = os.path.join(APP_ROOT, USER_DATA, username, dataset_name, config_name)
     if not os.path.isdir(target):
         os.makedirs(target, exist_ok=True)
-    create_config(username, APP_ROOT, dataset_name, config_name)
+    create_config(username, APP_ROOT, dataset_name, config_name, sess)
     return config_name
+
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def save_files(target, files, dataset_name):
+
+def save_files(target, files):
     for filename, file in files.items():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            destination = os.path.join(target, file.filename)
-            file.save(destination, filename)
+            destination = os.path.join(target, filename)
+            file.save(destination)
     return True
 
 
-def new_config(dataset_name, filenames, APP_ROOT, username, sess):
-    if os.path.isdir(os.path.join(APP_ROOT, USER_DATA, username, dataset_name)):
-        dataset_name = generate_dataset_name(APP_ROOT, username, dataset_name)
+def new_dataset(dataset_name, filenames, APP_ROOT, username, sess):
+    dataset_name = generate_dataset_name(APP_ROOT, username, dataset_name)
+    destination = os.path.join(APP_ROOT, USER_DATA, username, dataset_name)
 
-    config_name = define_new_config_file(dataset_name, APP_ROOT, username, sess.get_writer())
-    sess.set('config_file', create_config(username, APP_ROOT, dataset_name, config_name))
-    path = os.path.join(APP_ROOT, USER_DATA, username, dataset_name)
-    save_files(path, filenames, dataset_name, sess)
+    if not os.path.isdir(destination):
+        os.makedirs(destination, exist_ok=True)
 
-    # sess.get_writer().add_item('PATHS', 'train_file', os.path.join(path, train_form_file.filename))
-    # sess.get_writer().add_item('PATHS', 'file', os.path.join(path, train_form_file.filename))
-    # sess.set('file', os.path.join(path, train_form_file.filename))
-    # sess.get_writer().write_config(sess.get('config_file'))
+    save_files(destination, filenames)
+    config_name = define_new_config_file(dataset_name, APP_ROOT, username, sess)
+
     return 'slider'

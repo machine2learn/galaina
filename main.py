@@ -1,6 +1,7 @@
 import os
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask.json import jsonify
 from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
 
@@ -14,7 +15,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 
 from utils import profile
 from utils.db_ops import checklogin
-from utils.profile import new_config
+from utils.profile import new_dataset
 
 app = Flask(__name__)
 app.secret_key = 'amir'
@@ -45,10 +46,15 @@ def upload():
     upload_page = '/upload_file_new_form.html' if user_configs else '/upload_file_first_form.html'
 
     if request.method == 'POST':
-        new_config(request.form.datasetname, request.files.items(), APP_ROOT, session['user'], sess)
+        new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
         return redirect(url_for('next'))
     return render_template(upload_page, page=0)
     # return redirect(upload_page)
+
+@app.route('/dataset_configs')
+def dataset_configs():
+    user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
+    return jsonify(user_dataset = user_dataset, param_configs = param_configs, user_configs = user_configs)
 
 
 @app.route('/next')

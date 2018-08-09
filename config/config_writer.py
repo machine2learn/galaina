@@ -5,8 +5,10 @@ from config.config_reader import CustomConfigParser
 
 class ConfigWriter:
 
-    def __init__(self):
+    def __init__(self, path, name):
+        self.path = path
         self.config = CustomConfigParser()
+        self.create_config(name)
 
     def itemize(self, form):
         result = []
@@ -26,10 +28,14 @@ class ConfigWriter:
             self.config.add_section(section)
         self.config.set(section, key, value)
 
-    def write_config(self, path):
-        with open(path, 'w') as f:
+    def write_config(self):
+        with open(self.path, 'w') as f:
             self.config.write(f)
 
-    def append_config(self, path):
-        with open(path, 'a') as f:
+    def create_config(self, name):
+        self.add_item('INFO', 'config_name', name)
+        self.write_config()
+
+    def append_config(self):
+        with open(self.path, 'a') as f:
             self.config.write(f)
