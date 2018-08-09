@@ -2,6 +2,8 @@ $(document).ready(function () {
     var table = $('#upload').DataTable({
         'select': 'multiple',
         'searching': false,
+        fixedHeader: true
+
     });
 
     var dataset_table;
@@ -18,6 +20,9 @@ $(document).ready(function () {
     });
 
     var visible = true;
+    var tableContainer = $(table.table().container());
+    var dataset_tableContainer;
+
 
     $('#removeRow').on('click', function () {
         table.rows({selected: true}).every(function (rowIdx, tableLoop, rowLoop) {
@@ -58,6 +63,16 @@ $(document).ready(function () {
             handle_key.user_datasets = data.user_dataset[0];
             handle_key.user_configs = data.user_configs;
 
+            var first_dataset_configs = handle_key.user_configs[handle_key.user_datasets[0]];
+            dataset_table = $('#dataset-table').DataTable({
+                data: [first_dataset_configs],
+                columns: [{title: 'config'}],
+                fixedHeader: true
+            }).draw(false);
+
+            dataset_tableContainer = $(dataset_table.table().container());
+            dataset_tableContainer.css('display', 'none');
+            dataset_table.fixedHeader.adjust();
         }
 
     });
@@ -65,31 +80,14 @@ $(document).ready(function () {
     $('#existingdataset').on('click', function () {
 
         $('#existing-select').toggle();
-        // $('#dataset-table-div').toggle();
 
-        if (visible) {
-            table.destroy();
-            $('#upload').empty();
+        tableContainer.css('display', visible ? 'none' : 'block');
+        table.fixedHeader.adjust();
 
-            var first_dataset_configs = handle_key.user_configs[handle_key.user_datasets[0]];
-            dataset_table = $('#dataset-table').DataTable({
-                data: [first_dataset_configs],
-                columns: [{title: 'config'}],
-            });
-        }
-        else {
-            table = $('#upload').DataTable({
-                select: 'multiple',
-                searching: false,
-                columns: [{title: 'Input data'}, {title: 'Factor Model'}],
-                data: [[`<input type=\"file\" name=input-${counter}/>`, `<input type=\"file\"  name=factor-${counter}/>`]]
-            });
-            dataset_table.destroy();
-            $('#dataset-table').empty();
+        dataset_tableContainer.css('display', visible ? 'block' : 'none');
+        dataset_table.fixedHeader.adjust();
 
-        }
         visible = !visible;
-
     });
 
 
