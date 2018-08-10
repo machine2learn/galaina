@@ -59,5 +59,18 @@
     <script type="text/javascript" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/select/1.2.7/js/dataTables.select.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.1.5/js/dataTables.fixedHeader.min.js"></script>
+
+    <script type=text/javascript>
+        var handle_key = {};
+        handle_key.user_datasets = {{ user_dataset | tojson | safe }};
+        handle_key.user_configs = {{ user_configs | tojson | safe }};
+
+        handle_key.user_datasets = handle_key.user_datasets;
+
+        window.appConfig = {
+            handle_key: handle_key,
+        }
+
+    </script>
     <script src="{{ url_for('.static', filename='upload.js') }}"></script>
 {% endblock %}

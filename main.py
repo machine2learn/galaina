@@ -55,8 +55,6 @@ def upload():
         return redirect(url_for('next'))
 
     if not user_configs:
-        return render_template(upload_page, page=0)
-    else:
         return render_template(upload_page, page=0, user_dataset=user_dataset, user_configs=user_configs)
 
 
