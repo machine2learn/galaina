@@ -90,19 +90,7 @@ $(document).ready(function () {
             .attr("type", "hidden")
             .attr("name", "selected_config").val(JSON.stringify(selected_config));
 
-        $("#existing-select option:selected").each(function () {
-            dataset_selected = $(this).text();
-        });
-
-
-
-        let dataset_selected_input = $("<input>")
-            .attr("type", "hidden")
-            .attr("name", "selected_dataset").val(JSON.stringify(dataset_selected));
-
         $('form').append($(input));
-        $('form').append($(dataset_selected_input));
-
     });
 
 
