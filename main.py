@@ -48,8 +48,11 @@ def upload():
     if request.method == 'POST':
         new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
         return redirect(url_for('next'))
-    return render_template(upload_page, page=0)
-    # return redirect(upload_page)
+
+    if not user_configs:
+        return render_template(upload_page, page=0)
+    else:
+        return render_template(upload_page, page=0, user_dataset=user_dataset, user_configs=user_configs)
 
 @app.route('/dataset_configs')
 def dataset_configs():

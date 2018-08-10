@@ -39,43 +39,28 @@ $(document).ready(function () {
         $('form').append($(input));
     });
 
+    $.each(handle_key.user_datasets, function (i, item) {
+        $('#existing-select').append($('<option>', {
+            value: item,
+            text: item
+        }));
+    });
 
     $('#existing-select').hide();
 
-    var handle_key = {};
 
-    $.ajax({
-        url: "/dataset_configs",
-        type: 'GET',
-        dataType: 'json',
-        contentType: 'application/json;charset=UTF-8',
-        accepts: {
-            json: 'application/json',
-        },
-        success: function (data) {
-            items = data.user_dataset[0];
-            $.each(items, function (i, item) {
-                $('#existing-select').append($('<option>', {
-                    value: item,
-                    text: item
-                }));
-            });
-            handle_key.user_datasets = data.user_dataset[0];
-            handle_key.user_configs = data.user_configs;
+    handle_key = appConfig.handle_key;
+    var first_dataset_configs = handle_key.user_configs[handle_key.user_datasets[0]];
+    dataset_table = $('#dataset-table').DataTable({
+        data: [first_dataset_configs],
+        'select': 'multiple',
+        columns: [{title: 'config'}],
+        fixedHeader: true
+    }).draw(false);
 
-            var first_dataset_configs = handle_key.user_configs[handle_key.user_datasets[0]];
-            dataset_table = $('#dataset-table').DataTable({
-                data: [first_dataset_configs],
-                columns: [{title: 'config'}],
-                fixedHeader: true
-            }).draw(false);
-
-            dataset_tableContainer = $(dataset_table.table().container());
-            dataset_tableContainer.css('display', 'none');
-            dataset_table.fixedHeader.adjust();
-        }
-
-    });
+    dataset_tableContainer = $(dataset_table.table().container());
+    dataset_tableContainer.css('display', 'none');
+    dataset_table.fixedHeader.adjust();
 
     $('#existingdataset').on('click', function () {
 
