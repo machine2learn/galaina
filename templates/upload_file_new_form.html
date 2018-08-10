@@ -4,11 +4,9 @@
 
 {% block styles %}
     {{ super() }}
-    <link rel="stylesheet" type="text/css"
-          href="https://cdn.datatables.net/v/dt/dt-1.10.16/sl-1.2.5/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.16/sl-1.2.5/datatables.min.css"/>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css"/>
-    <link rel="stylesheet" type="text/css"
-          href="https://cdn.datatables.net/fixedheader/3.1.5/css/fixedHeader.dataTables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.1.5/css/fixedHeader.dataTables.min.css"/>
     <link rel="stylesheet" href="{{ url_for('.static', filename='css/my.css') }}">
 {% endblock %}
 
@@ -21,6 +19,13 @@
         <div class="'col-lg-2">
             <label for="existingdataset">Existing dataset</label>
             <input type="checkbox" id="existingdataset" name="existingdataset">
+        </div>
+    </div>
+    <div class="clearfix"></div>
+    <div class="row" id="datasetname-row">
+        <div class="'col-lg-2">
+            <label for="datasetname">Dataset name</label>
+            <input type="text" id="datasetname">
         </div>
     </div>
 
