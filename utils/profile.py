@@ -17,8 +17,6 @@ def generate_dataset_name(app_root, username, datasetname):
         user_datasets = [a for a in os.listdir(os.path.join(app_root, 'user_data', username))
                          if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
 
-    latest = 1
-
     new_dataset_name = datasetname
     exists = any(datasetname in dataset for dataset in user_datasets)
     if exists:
@@ -26,6 +24,8 @@ def generate_dataset_name(app_root, username, datasetname):
         if datasets:
             latest = max(datasets) + 1
             new_dataset_name = datasetname + '_' + str(latest)
+        else:
+            new_dataset_name = datasetname +'_' + 1
 
     return new_dataset_name
 
