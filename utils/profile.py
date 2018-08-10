@@ -17,12 +17,16 @@ def generate_dataset_name(app_root, username, datasetname):
                          if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
 
     latest = 1
-    if datasetname in user_datasets:
-        datasets = [conf_name.split(datasetname + '_')[1] for conf_name in user_datasets]
+
+    new_dataset_name = datasetname
+    exists = any(datasetname in dataset for dataset in user_datasets)
+    if exists:
+        datasets = [int(conf_name.split(datasetname + '_')[1]) for conf_name in user_datasets]
         if datasets:
             latest = max(datasets) + 1
+            new_dataset_name = datasetname + '_' + str(latest)
 
-    return datasetname + '_' + str(latest)
+    return new_dataset_name
 
 
 def get_configs_files(app_root, username):
@@ -41,7 +45,7 @@ def get_configs_files(app_root, username):
             config.read(os.path.join(user_path, user_dataset, config_file, 'config.ini'))
             configs[dataset_config] = {'name': config.get('INFO', 'config_name')}
 
-        existing_datasets.append((user_dataset, user_dataset))
+        existing_datasets.append(user_dataset)
     return existing_datasets, user_configs, configs
 
 

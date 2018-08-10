@@ -14,7 +14,7 @@ $(document).ready(function () {
     var first_dataset_configs = handle_key.user_configs[handle_key.user_datasets[0]];
     var dataset_table = $('#dataset-table').DataTable({
         data: [first_dataset_configs],
-        'select': 'multiple',
+        'select': 'single',
         columns: [{title: 'config'}],
         fixedHeader: true
     }).draw(false);
@@ -68,6 +68,28 @@ $(document).ready(function () {
         dataset_table.fixedHeader.adjust();
 
         visible = !visible;
+    });
+
+    $('#existing-select').on('change', function () {
+        var dataset_selected = "";
+        $("#existing-select option:selected").each(function () {
+            dataset_selected = $(this).text();
+        });
+        data = handle_key.user_configs[dataset_selected];
+        data = data.map(x => [x]);
+        dataset_table.clear().rows.add(data).draw();
+
+    });
+
+    $('form').submit(function () {
+        let selected_config = [];
+        dataset_table.rows({selected: true}).every(function (rowIdx, tableLoop, rowLoop) {
+            selected_config.push(this.data()[0]);
+        });
+        let input = $("<input>")
+            .attr("type", "hidden")
+            .attr("name", "selected_config").val(JSON.stringify(selected_config));
+        $('form').append($(input));
     });
 
 

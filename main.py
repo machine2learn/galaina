@@ -32,11 +32,10 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 sess = Session(app)
 
 
-
-
 @app.route('/')
 def main():
     return redirect(url_for('login'))
+
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
@@ -46,7 +45,10 @@ def upload():
     upload_page = '/upload_file_new_form.html' if user_configs else '/upload_file_first_form.html'
 
     if request.method == 'POST':
-        new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
+        if 'existingdataset' in request.form and request.form['existingdataset'] == 'on':
+            pass # TODO
+        else:
+            new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
         return redirect(url_for('next'))
 
     if not user_configs:
@@ -54,10 +56,11 @@ def upload():
     else:
         return render_template(upload_page, page=0, user_dataset=user_dataset, user_configs=user_configs)
 
+
 @app.route('/dataset_configs')
 def dataset_configs():
     user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
-    return jsonify(user_dataset = user_dataset, param_configs = param_configs, user_configs = user_configs)
+    return jsonify(user_dataset=user_dataset, param_configs=param_configs, user_configs=user_configs)
 
 
 @app.route('/next')
@@ -111,6 +114,7 @@ def create_all():
         db.session.add(new_user)
         db.session.commit()
     return True
+
 
 def create():
     from db import db
