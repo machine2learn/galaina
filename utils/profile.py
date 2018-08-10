@@ -3,6 +3,7 @@ import os
 
 from werkzeug.utils import secure_filename
 
+from config.config_reader import read_config
 from config.config_writer import ConfigWriter
 
 USER_DATA = 'user_data'
@@ -41,9 +42,8 @@ def get_configs_files(app_root, username):
 
         for config_file in user_configs[user_dataset]:
             dataset_config = user_dataset + '_' + config_file
-            config = configparser.ConfigParser()
-            config.read(os.path.join(user_path, user_dataset, config_file, 'config.ini'))
-            configs[dataset_config] = {'name': config.get('INFO', 'config_name')}
+            config = read_config(os.path.join(user_path, user_dataset, config_file, 'config.ini'))
+            configs[dataset_config] = {'name': config.get_name(), 'path': config.get_path()}
 
         existing_datasets.append(user_dataset)
     return existing_datasets, user_configs, configs

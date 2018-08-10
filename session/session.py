@@ -4,7 +4,7 @@ from flask import session, redirect, url_for
 
 from config.config_writer import ConfigWriter
 
-CONFING_NAME = 'config.ini'
+CONFIG_NAME = 'config.ini'
 
 
 class Session:
@@ -28,7 +28,7 @@ class Session:
 
     def create_config(self, path, name):
         user = self.get_session('user')
-        config_path = os.path.join(path, CONFING_NAME)
+        config_path = os.path.join(path, CONFIG_NAME)
         self._config_writer[user] = ConfigWriter(config_path, name)
 
     def get_writer(self):

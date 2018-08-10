@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+{% from '_render_field.html' import render_field, render_single_field %}
+
+{% block styles %}
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.16/sl-1.2.5/datatables.min.css"/>
+    <link rel="stylesheet" href="{{ url_for('.static', filename='css/my.css') }}">
+{% endblock %}
+
+{% block app_content %}
+    <div align="center">
+        <th1> Parameters</th1>
+    </div>
+
+    <form action="/next" method="post">
+        {{ form.csrf_token }}
+        {{ render_field(form.copula_factor) }}
+        {{ render_field(form.edge_weight) }}
+        {{ render_field(form.pc_algorithm) }}
+        {{ render_field(form.plot_and_display) }}
+        <button type="submit" formmethod="post" class="btn btn-primary">Submit</button>
+
+    </form>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.16/sl-1.2.5/datatables.min.js"></script>
+{% endblock %}
+

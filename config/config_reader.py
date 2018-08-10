@@ -2,25 +2,9 @@ import configparser
 import os
 from typing import Dict
 
-NETWORK = "NETWORK"
 
-TASK0 = 'TASK0'
+INFO = 'info'
 
-FEATURES = 'FEATURES'
-
-EXPERIMENT = 'EXPERIMENT'
-
-CUSTOM_MODEL = 'CUSTOM_MODEL'
-
-TRAINING = 'TRAINING'
-
-PATHS = 'PATHS'
-
-COLUMN_CHANGES = 'COLUMN_CHANGES'
-
-TARGETS = 'TARGETS'
-
-SPLIT_DF = 'SPLIT_DF'
 
 def abs_path_of(rel_path):
     return os.path.join(os.path.dirname(__file__), rel_path)
@@ -45,30 +29,16 @@ class CustomConfigParser(configparser.ConfigParser):
 
         return abs_path_of(raw_get)
 
-    def _from_training(self, param):
-        return self.get(TRAINING, param)
+    def _from_info(self, param):
+        return self.get(INFO, param)
 
-    def _from_network(self, param):
-        return self.get(NETWORK, param)
 
-    def _from_custom(self, param):
-        return self.get(CUSTOM_MODEL, param)
+    def get_path(self):
+        return self._from_info('path')
 
-    def _from_process(self, param):
-        return dict(self.items(EXPERIMENT, param))
+    def get_name(self):
+        return self._from_info('config_name')
 
-    def _from_paths(self, param):
-        return self[PATHS][param]
-
-    def custom_model_path(self)-> Dict[str, str]:
-        return dict(self.items(CUSTOM_MODEL))
-
-    def training(self) -> Dict[str, str]:
-        print(self.items(TRAINING))
-        return dict(self.items(TRAINING))
-
-    def experiment(self) -> Dict[str, str]:
-        return dict(self.items(EXPERIMENT))
 
     def path(self):
         return dict(self.items(PATHS))

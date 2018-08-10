@@ -34,6 +34,7 @@ class ConfigWriter:
 
     def create_config(self, name):
         self.add_item('INFO', 'config_name', name)
+        self.add_item('INFO', 'config_path', self.path)
         self.write_config()
 
     def append_config(self):

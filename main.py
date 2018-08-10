@@ -1,4 +1,5 @@
 import os
+from forms.parameters_form import GeneralParameterForm
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask.json import jsonify
@@ -37,6 +38,8 @@ def main():
     return redirect(url_for('login'))
 
 
+
+
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
@@ -46,7 +49,7 @@ def upload():
 
     if request.method == 'POST':
         if 'existingdataset' in request.form and request.form['existingdataset'] == 'on':
-            pass # TODO
+            pass
         else:
             new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
         return redirect(url_for('next'))
@@ -62,10 +65,20 @@ def dataset_configs():
     user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
     return jsonify(user_dataset=user_dataset, param_configs=param_configs, user_configs=user_configs)
 
+#
+# @app.route('/next')
+# def next():
+#     return "<h1>hello world</h1>"
+#
 
-@app.route('/next')
+@app.route('/next' ,methods=['GET', 'POST'])
 def next():
-    return "<h1>hello world</h1>"
+    form = GeneralParameterForm()
+    if form.validate_on_submit():
+        print(request.form)
+        sess.get_writer().populate_config(request.form)
+        sess.get_writer().write_config()
+    return render_template('parameters.html', form=form, page=2)
 
 
 @login_manager.user_loader
@@ -101,6 +114,7 @@ def signup():
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
 
 
 def create_all():
