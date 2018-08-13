@@ -6,28 +6,37 @@ from werkzeug.utils import secure_filename
 from config.config_reader import read_config
 from config.config_writer import ConfigWriter
 
+DATASET_DEFAULT_NAME = 'dataset'
+
 USER_DATA = 'user_data'
 ALLOWED_EXTENSIONS = ['csv']
 
 
 def generate_dataset_name(app_root, username, datasetname):
-    datasetname = datasetname or 'dataset'
+    datasetname = datasetname or DATASET_DEFAULT_NAME
     user_datasets = []
-    if os.path.isdir(os.path.join(app_root, 'user_data', username)):
-        user_datasets = [a for a in os.listdir(os.path.join(app_root, 'user_data', username))
-                         if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
+    if path_already_exists(app_root, username):
+        user_datasets = find_all_datasets(app_root, username)
 
-    new_dataset_name = datasetname
-    exists = any(datasetname in dataset for dataset in user_datasets)
-    if exists:
-        datasets = [int(conf_name.split(datasetname + '_')[1]) for conf_name in user_datasets]
+    if datasetname is not DATASET_DEFAULT_NAME and datasetname not in user_datasets:
+        return datasetname
+
+    latest = 1
+    contains_subset = any(datasetname in dataset for dataset in user_datasets)
+    if contains_subset:
+        datasets = [int(conf_name.split(datasetname + '_')[1]) for conf_name in user_datasets if '_' in conf_name]
         if datasets:
             latest = max(datasets) + 1
-            new_dataset_name = datasetname + '_' + str(latest)
-        else:
-            new_dataset_name = datasetname +'_' + 1
 
-    return new_dataset_name
+    return  f"{datasetname}_{latest}"
+
+
+def path_already_exists(app_root, username):
+    return os.path.isdir(os.path.join(app_root, 'user_data', username))
+
+def find_all_datasets(app_root, username):
+    return [a for a in os.listdir(os.path.join(app_root, 'user_data', username))
+            if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
 
 
 def get_configs_files(app_root, username):
