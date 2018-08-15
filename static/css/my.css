@@ -623,4 +623,29 @@ tr:hover td {
     min-height: 460px !important;
 }
 
-.top-buffer { margin-top:20px; }
+.top-buffer { margin-top: 5px; }
+
+.error {
+    color: red;
+}
+.margin_bottom_20{
+    margin-bottom: 20px;
+}
+
+/* Customize table */
+table.dataTable thead th,table.dataTable thead td {
+    border-bottom: 1px solid #9e9e9e !important;
+}
+
+table.dataTable.no-footer {
+    border-bottom: 1px solid #9e9e9e !important;
+}
+
+table.dataTable tfoot th, table.dataTable tfoot td {
+    border-top: 1px solid #9e9e9e !important;
+}
+.table-bordered {
+  border-bottom: 0px !important;
+    border-right: 0px !important;
+    border-left: 0px !important;
+}

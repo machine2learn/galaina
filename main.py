@@ -1,4 +1,5 @@
 import os
+import json
 from forms.parameters_form import GeneralParameterForm
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
@@ -16,7 +17,11 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 
 from utils import profile
 from utils.db_ops import checklogin
-from utils.profile import new_dataset
+from utils.profile import new_dataset, set_dataset
+from utils.parameters_util import check_causal_discovery_ob, set_form
+from utils.sys_utils import delete_configs
+
+from werkzeug.datastructures import ImmutableMultiDict
 
 app = Flask(__name__)
 app.secret_key = 'amir'
@@ -38,23 +43,20 @@ def main():
     return redirect(url_for('login'))
 
 
-
-
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
     sess.reset_user()
     user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
-    upload_page = '/upload_file_new_form.html' if user_configs else '/upload_file_first_form.html'
-
     if request.method == 'POST':
         if 'existingdataset' in request.form and request.form['existingdataset'] == 'on':
-            pass
+            set_dataset(APP_ROOT, session['user'], request.form['existing-select'],
+                        json.loads(request.form['selected_config'])[0], sess)
         else:
             new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
-        return redirect(url_for('next'))
-
-    return render_template(upload_page, page=0, user_dataset=user_dataset, user_configs=user_configs)
+        return redirect(url_for('parameters'))
+    return render_template('/upload.html', page=0, user_dataset=user_dataset, user_configs=user_configs,
+                           param_configs = param_configs)
 
 
 @app.route('/dataset_configs')
@@ -62,21 +64,34 @@ def dataset_configs():
     user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
     return jsonify(user_dataset=user_dataset, param_configs=param_configs, user_configs=user_configs)
 
-#
-# @app.route('/next')
-# def next():
-#     return "<h1>hello world</h1>"
-#
 
-@app.route('/next' ,methods=['GET', 'POST'])
+
+@app.route('/next')
 def next():
+    return "<h1>hello world</h1>"
+
+
+
+@app.route('/parameters', methods=['GET', 'POST'])
+def parameters():
     form = GeneralParameterForm()
     if form.validate_on_submit():
-        print(request.form)
-        sess.get_writer().populate_config(request.form)
+        dict_parameters = request.form.to_dict()
+        check_causal_discovery_ob(dict_parameters)
+        sess.get_writer().load_input_output()
+        sess.get_writer().populate_config(dict_parameters)
         sess.get_writer().write_config()
-    return render_template('parameters.html', form=form, page=2)
+        return redirect(url_for('next'))
+    set_form(form, sess.get_reader())
+    return render_template('parameters.html', form=form, page=1)
 
+
+@app.route('/delete_config', methods=['POST'])
+@login_required
+def delete_config():
+    delete_configs(request.get_json()['config'], request.get_json()['dataset'], session['user'])
+    user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
+    return jsonify(param_configs=param_configs, user_configs=user_configs)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -113,7 +128,6 @@ def logout():
     return redirect(url_for('index'))
 
 
-
 def create_all():
     from db import db
     with app.app_context():
@@ -132,7 +146,6 @@ def create():
     with app.app_context():
         db.init_app(app)
         db.create_all()
-
 
 db.init_app(app)
 

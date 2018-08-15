@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import SubmitField, TextField, FormField, FileField, IntegerField, FieldList, SelectField, FloatField, \
-    BooleanField
+    HiddenField
 from wtforms.validators import InputRequired, ValidationError, StopValidation, AnyOf, Regexp, NumberRange, DataRequired
 from wtforms import StringField
 
@@ -24,36 +24,66 @@ class EdgeWeightForm(FlaskForm):
 
 
 class PcAlgorithmForm(FlaskForm):
-    causal_discovery_observation_n = IntegerField("Causal discovery observation", validators=[InputRequired()],
-                                                  default=0, description="")
+    # causal_discovery_observation_n : when “automatic” is selected,
+    #  the `INI` file will have the line `causal_discovery_observation_n=0`
+    causal_discovery_observation_n = StringField("Causal discovery observation",
+                                                 validators=[InputRequired(),
+                                                             Regexp(r'^(\d+|[aA][uU][tT][oO][mM][aA][tT][iI][cC])$')],
+                                                 default='automatic', description="")
+
     indepTest = SelectField("indepTest",
                             choices=[('dsepTest', 'dsepTest'), ('disCItest', 'disCItest'), ('binCItest', 'binCItest'),
                                      ('gaussCItest', 'gaussCItest')],
 
-                            default='gaussCItest')
+                            default='gaussCItest', description="Function for testing conditional independence.")
 
-    alpha = FloatField("Alpha", validators=[InputRequired()], default=0.05, description="")
-    numCores = IntegerField("Number cores", validators=[InputRequired()], default=1, description="")
+    alpha = FloatField("Alpha", validators=[InputRequired(), NumberRange(min=0, max=1)], default=0.05,
+                       description="Significance level (number in"
+                                   "(0,1) for the individual "
+                                   "conditional independence "
+                                   "tests.")
+    numCores = IntegerField("Number cores", validators=[InputRequired()], default=1, description="Specifies the number"
+                                                                                                 " of cores to be used "
+                                                                                                 "for parallel "
+                                                                                                 "estimation of "
+                                                                                                 "skeleton.")
     verbose = SelectField("Verbose", choices=[(True, 'True'), (False, 'False')], validators=[InputRequired()],
-                           coerce=lambda x: x == 'True',
-                          default='False')
-    # fixedGaps = StringField("FixedGaps", validators=[InputRequired()], default='NULL')
-    # fixedEdges = StringField("FixedEdges", validators=[InputRequired()], default='NULL')
-    NAdelete = SelectField("NAdelete", choices=[(True, 'True'), (False, 'False')], validators=[InputRequired()],
-                           coerce=lambda x: x == 'True', default='True')
-    m_max = StringField("M.max",  validators=[InputRequired(), Regexp(r'^(\d+|[iI][Nn][Ff])$')], default='Inf')
+                          coerce=lambda x: x == 'True',
+                          default='False', description="If TRUE, detailed output is provided.")
 
-    u2pd = SelectField("u2pd", choices=[('relaxed', 'relaxed'), ('rand', 'rand'), ('retry', 'retry')], default='relaxed')
+    fixedGaps = HiddenField("FixedGaps", validators=[InputRequired()], default='NULL')
+    fixedEdges = HiddenField("FixedEdges", validators=[InputRequired()], default='NULL')
+
+    NAdelete = SelectField("NAdelete", choices=[(True, 'True'), (False, 'False')], validators=[InputRequired()],
+                           coerce=lambda x: x == 'True', default='True',
+                           description="If indepTest returns NA and this option is TRUE, the corresponding edge is "
+                                       "deleted. If this option is FALSE, the edge is not deleted.")
+    m_max = StringField("M.max", validators=[InputRequired(), Regexp(r'^(\d+|[iI][Nn][Ff])$')], default='Inf',
+                        description="Maximal size of the conditioning sets that are considered in the conditional "
+                                    "independence tests. (Inf = infinite)")
+
+    u2pd = SelectField("u2pd", choices=[('relaxed', 'relaxed'), ('rand', 'rand'), ('retry', 'retry')],
+                       default='relaxed',
+                       description="String specifying the method for dealing with conflicting information when trying "
+                                   "to orient edges.")
     skel_method = SelectField("skel_method",
                               choices=[('stable', 'stable'), ('original', 'original'), ('stable.fast', 'stable.fast')],
-                              default='stable')
+                              default='stable',
+                              description="Character string specifying method; the default, 'stable' provides an "
+                                          "order-independent skeleton.")
 
-    conservative = SelectField("Conservative", choices=[(True, 'True'), (False, 'False')],validators=[InputRequired()],
-                           coerce=lambda x: x == 'True',  default='False')
+    conservative = SelectField("Conservative", choices=[(True, 'True'), (False, 'False')], validators=[InputRequired()],
+                               coerce=lambda x: x == 'True', default='False',
+                               description="Logical indicating if the conservative PC is used.")
     maj_rule = SelectField("Maj rule", choices=[(True, 'True'), (False, 'False')], validators=[InputRequired()],
-                           coerce=lambda x: x == 'True', default='True')
+                           coerce=lambda x: x == 'True', default='True',
+                           description="Logical indicating that the triples shall be checked for ambiguity using a "
+                                       "majority rule idea, which is less strict than the conservative PC algorithm.")
     solve_confl = SelectField("Solve confl", choices=[(True, 'True'), (False, 'False')], validators=[InputRequired()],
-                              coerce=lambda x: x == 'True', default='True')
+                              coerce=lambda x: x == 'True', default='True',
+                              description="If TRUE, the orientation of the v-structures and the orientation rules work "
+                                          "with lists for candidate sets and allow bi-directed edges to resolve "
+                                          "conflicting edge orientations.")
 
 
 class PlotAndDisplayForm(FlaskForm):
@@ -61,7 +91,7 @@ class PlotAndDisplayForm(FlaskForm):
 
 
 class GeneralParameterForm(FlaskForm):
+    plot_and_display = FormField(PlotAndDisplayForm)
+    pc_algorithm = FormField(PcAlgorithmForm)
     copula_factor = FormField(CopulaFactorForm)
     edge_weight = FormField(EdgeWeightForm)
-    pc_algorithm = FormField(PcAlgorithmForm)
-    plot_and_display = FormField(PlotAndDisplayForm)

@@ -32,39 +32,30 @@
     </nav>
 {% endblock %}
 
-{#{% block content %}#}
-{#    <div class="container">#}
-{#        {% block page_content %}#}
-{#        {% endblock %}#}
-{#    </div>#}
-{#{% endblock %}#}
-
 {% block content %}
-
+    <link rel="shortcut icon" href="#"> {# favicon.ico is the icon of a website on the title bar#}
     <div class="container">
         <div id="wizard" ALIGN="center">
-            <button type="button" id="0" class="btn btn-default btn-arrow-right" onclick="location.href='/upload';">1.
-                Data
-                upload
+            <button type="button" id="0" class="btn btn-default btn-arrow-right" onclick="location.href='/upload';">
+                1. Data upload
             </button>
-            <button type="button" id="1" class="btn btn-default btn-arrow-right" onclick="location.href='/slider';">2.
-                Split
-                data
+            <button type="button" id="1" class="btn btn-default btn-arrow-right" onclick="location.href='/parameters';">
+                2. Parameters
             </button>
-            <button type="button" id="2" class="btn btn-default btn-arrow-right" onclick="location.href='/feature';">3.
-                Feature select
+            <button type="button" id="2" class="btn btn-default btn-arrow-right" onclick="location.href='/next';">
+                3. Next
             </button>
-            <button type="button" id="3" class="btn btn-default btn-arrow-right" onclick="location.href='/target';">4.
-                Target select
-            </button>
-            <button type="button" id="4" class="btn btn-default btn-arrow-right" onclick="location.href='/parameters';">
-                5.
-                Parameters
-            </button>
-            <button type="button" id="5" class="btn btn-default btn-arrow-right" onclick="location.href='/run';">6. Run
-                and
-                predict
-            </button>
+            {#            <button type="button" id="3" class="btn btn-default btn-arrow-right" onclick="location.href='/target';">4.#}
+            {#                Target select#}
+            {#            </button>#}
+            {#            <button type="button" id="4" class="btn btn-default btn-arrow-right" onclick="location.href='/parameters';">#}
+            {#                5.#}
+            {#                Parameters#}
+            {#            </button>#}
+            {#            <button type="button" id="5" class="btn btn-default btn-arrow-right" onclick="location.href='/run';">6. Run#}
+            {#                and#}
+            {#                predict#}
+            {#            </button>#}
         </div>
     </div>
     <div class="container-fluid">
