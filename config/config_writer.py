@@ -4,6 +4,17 @@ from pprint import pprint
 from config.config_reader import CustomConfigParser
 from config import config_reader
 import os
+import configparser
+
+sections = ['INFO', 'COPULA_FACTOR', 'EDGE_WEIGHT', 'PC_ALGORITHM', 'PLOT_AND_DISPLAY',
+            'input_paths_and_related_parameters', 'output_paths']
+INFO = 'INFO'
+COPULA_FACTOR = 'COPULA_FACTOR'
+EDGE_WEIGHT = 'EDGE_WEIGHT'
+PC_ALGORITHM = 'PC_ALGORITHM'
+PLOT_AND_DISPLAY = 'PLOT_AND_DISPLAY'
+input_paths_and_related_parameters = 'input_paths_and_related_parameters'
+output_paths = 'output_paths'
 
 
 class ConfigWriter:
@@ -20,6 +31,15 @@ class ConfigWriter:
                 section, key = k.split('-', 1)
                 result.append((section.upper(), key, value))
         return result
+
+    def keys(self):
+        return self.config._sections.keys()
+
+    def get_section(self, section):
+        return self.config._sections[section]
+
+    def get(self, section, param):
+        return self.get_section(section)[param]
 
     def populate_config(self, form):
         for section, key, value in self.itemize(form):
@@ -80,6 +100,6 @@ class ConfigWriter:
             for key, val in reader[section].items():
                 self.add_item(section, key, val)
 
-    def load_input_output(self):
-        self.load_section('input_paths_and_related_parameters')
-        self.load_section('output_paths')
+    def load_all_sections(self):
+        for sec in sections:
+            self.load_section(sec)

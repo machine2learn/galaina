@@ -2,7 +2,7 @@ import os
 import json
 from forms.parameters_form import GeneralParameterForm
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, send_from_directory
 from flask.json import jsonify
 from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
@@ -47,7 +47,7 @@ def main():
 @login_required
 def upload():
     sess.reset_user()
-    user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
+    user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'], session)
     if request.method == 'POST':
         if 'existingdataset' in request.form and request.form['existingdataset'] == 'on':
             set_dataset(APP_ROOT, session['user'], request.form['existing-select'],
@@ -56,7 +56,7 @@ def upload():
             new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
         return redirect(url_for('parameters'))
     return render_template('/upload.html', page=0, user_dataset=user_dataset, user_configs=user_configs,
-                           param_configs = param_configs)
+                           param_configs=param_configs)
 
 
 @app.route('/dataset_configs')
@@ -65,25 +65,46 @@ def dataset_configs():
     return jsonify(user_dataset=user_dataset, param_configs=param_configs, user_configs=user_configs)
 
 
-
-@app.route('/next')
-def next():
-    return "<h1>hello world</h1>"
-
-
-
 @app.route('/parameters', methods=['GET', 'POST'])
 def parameters():
     form = GeneralParameterForm()
     if form.validate_on_submit():
         dict_parameters = request.form.to_dict()
         check_causal_discovery_ob(dict_parameters)
-        sess.get_writer().load_input_output()
+        sess.get_writer().load_all_sections()
         sess.get_writer().populate_config(dict_parameters)
         sess.get_writer().write_config()
-        return redirect(url_for('next'))
-    set_form(form, sess.get_reader())
+        return redirect(url_for('run'))
+    set_form(form, sess.get_writer())
     return render_template('parameters.html', form=form, page=1)
+
+
+@app.route('/run', methods=['GET', 'POST'])
+def run():
+    if request.method == 'POST':
+        print('im running')
+    return render_template('run.html', page=2)
+
+
+@app.route("/download_pdf")
+def download_pdf():
+    pdf_path = sess.get_writer().get('output_paths', 'output_path_fig')
+    filename = pdf_path.split('/')[-1]
+    return send_file(pdf_path,
+                     mimetype='text/csv',
+                     attachment_filename=filename,
+                     as_attachment=True)
+
+
+@app.route("/show_pdf")
+def show_pdf():
+    pdf_path = sess.get_writer().get('output_paths', 'output_path_fig')
+    filename = pdf_path.split('/')[-1]
+    directory = '/'.join(pdf_path.split('/')[:-1])
+    return send_from_directory(directory=directory,
+                               mimetype='application/pdf',
+                               filename=filename
+                               )
 
 
 @app.route('/delete_config', methods=['POST'])
@@ -92,6 +113,7 @@ def delete_config():
     delete_configs(request.get_json()['config'], request.get_json()['dataset'], session['user'])
     user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
     return jsonify(param_configs=param_configs, user_configs=user_configs)
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -146,6 +168,7 @@ def create():
     with app.app_context():
         db.init_app(app)
         db.create_all()
+
 
 db.init_app(app)
 

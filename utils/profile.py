@@ -7,8 +7,9 @@ from config.config_reader import read_config
 from config.config_writer import ConfigWriter
 
 DATASET_DEFAULT_NAME = 'dataset'
-
 USER_DATA = 'user_data'
+INPUT_DATA = 'input'
+FACTOR_MODEL = 'factor'
 ALLOWED_EXTENSIONS = ['csv']
 
 
@@ -32,15 +33,15 @@ def generate_dataset_name(app_root, username, datasetname):
 
 
 def path_already_exists(app_root, username):
-    return os.path.isdir(os.path.join(app_root, 'user_data', username))
+    return os.path.isdir(os.path.join(app_root, USER_DATA, username))
 
 
 def find_all_datasets(app_root, username):
-    return [a for a in os.listdir(os.path.join(app_root, 'user_data', username))
-            if os.path.isdir(os.path.join(app_root, 'user_data', username, a))]
+    return [a for a in os.listdir(os.path.join(app_root, USER_DATA, username))
+            if os.path.isdir(os.path.join(app_root, USER_DATA, username, a))]
 
 
-def get_configs_files(app_root, username):
+def get_configs_files(app_root, username, session):
     user_configs = {}
     existing_datasets = []
     configs = {}
@@ -49,11 +50,13 @@ def get_configs_files(app_root, username):
     for user_dataset in user_datasets:
         user_configs[user_dataset] = [config for config in os.listdir(os.path.join(user_path, user_dataset)) if
                                       os.path.isdir(os.path.join(user_path, user_dataset, config))]
-
+        user_configs[user_dataset].remove(INPUT_DATA)
+        user_configs[user_dataset].remove(FACTOR_MODEL)
         for config_file in user_configs[user_dataset]:
             dataset_config = user_dataset + '_' + config_file
+            # TODO config reader to config writer
             config = read_config(os.path.join(user_path, user_dataset, config_file, 'config.ini'))
-            configs[dataset_config] = {'name': config.get_name(), 'path': config.get_path(), 'bootstrap':''}
+            configs[dataset_config] = {'name': config.get_name(), 'path': config.get_path(), 'bootstrap': ''}
             if 'EDGE_WEIGHT' in config.sections():
                 configs[dataset_config]['bootstrap'] = config.get_bootstrap_n();
 
@@ -79,6 +82,8 @@ def generate_config_name(app_root, username, dataset_name):
     if os.path.isdir(os.path.join(app_root, USER_DATA, username, dataset_name)):
         user_configs = [a for a in os.listdir(os.path.join(app_root, USER_DATA, username, dataset_name))
                         if os.path.isdir(os.path.join(app_root, USER_DATA, username, dataset_name, a))]
+        user_configs.remove(FACTOR_MODEL)
+        user_configs.remove(INPUT_DATA)
     dataset_configs = [int(conf_name.rsplit('_')[1]) for conf_name in user_configs]
     latest = 1 if not dataset_configs else max(dataset_configs) + 1
     return 'config_' + str(latest)
@@ -98,18 +103,10 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# def save_files(target, files):
-#     for filename, file in files.items():
-#         if file and allowed_file(file.filename):
-#             filename =secure_filename(file.filename)
-#             destination = os.path.join(target, filename)
-#             file.save(destination)
-#     return True
-
-def save_file(file, target):
+def save_file(file, target, option):
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        destination = os.path.join(target, filename)
+        destination = os.path.join(target, option, filename)
         file.save(destination)
         return destination
 
@@ -117,9 +114,25 @@ def save_file(file, target):
 def save_files(target, files):
     dict_files = {'input_data_ls': [], 'input_factor_ls': []}
     for input_file, factor_file in zip(files.getlist('input-1/'), files.getlist('factor-1/')):
-        dict_files['input_data_ls'].append(save_file(input_file, target))
-        dict_files['input_factor_ls'].append(save_file(factor_file, target))
+        dict_files['input_data_ls'].append(save_file(input_file, target, INPUT_DATA))
+        dict_files['input_factor_ls'].append(save_file(factor_file, target, FACTOR_MODEL))
     return dict_files
+
+
+def get_files(APP_ROOT, username, dataset_name):
+    dict_files = {'input_data_ls': [], 'input_factor_ls': []}
+    for file in os.listdir(os.path.join(APP_ROOT, USER_DATA, username, dataset_name, 'input')):
+        dict_files['input_data_ls'].append(os.path.join(APP_ROOT, USER_DATA, username, dataset_name, INPUT_DATA, file))
+    for file in os.listdir(os.path.join(APP_ROOT, USER_DATA, username, dataset_name, FACTOR_MODEL)):
+        dict_files['input_factor_ls'].append(
+            os.path.join(APP_ROOT, USER_DATA, username, dataset_name, FACTOR_MODEL, file))
+    return dict_files
+
+
+def save_new_config(dataset_name, APP_ROOT, username, sess, dict_files):
+    config_name = define_new_config_file(dataset_name, APP_ROOT, username, sess)
+    sess.get_writer().add_input_paths(dict_files)
+    sess.get_writer().add_output_paths(os.path.join(APP_ROOT, USER_DATA, username, dataset_name, config_name))
 
 
 def new_dataset(dataset_name, filenames, APP_ROOT, username, sess):
@@ -127,16 +140,18 @@ def new_dataset(dataset_name, filenames, APP_ROOT, username, sess):
     destination = os.path.join(APP_ROOT, USER_DATA, username, dataset_name)
     if not os.path.isdir(destination):
         os.makedirs(destination, exist_ok=True)
-    config_name = define_new_config_file(dataset_name, APP_ROOT, username, sess)
+        os.makedirs(os.path.join(destination, INPUT_DATA), exist_ok=True)
+        os.makedirs(os.path.join(destination, FACTOR_MODEL), exist_ok=True)
     dict_files = save_files(destination, filenames)
-    sess.get_writer().add_input_paths(dict_files)
-    sess.get_writer().add_output_paths(os.path.join(APP_ROOT, username, config_name))
+    save_new_config(dataset_name, APP_ROOT, username, sess, dict_files)
+
     return True
 
 
 def set_dataset(APP_ROOT, username, dataset_name, config_name, sess):
     if config_name == 'new_config':
-        config_name = define_new_config_file(dataset_name, APP_ROOT, username, sess)
+        dict_files = get_files(APP_ROOT, username, dataset_name)
+        save_new_config(dataset_name, APP_ROOT, username, sess, dict_files)
         return True
     path = os.path.join(APP_ROOT, USER_DATA, username, dataset_name, config_name)
     sess.create_config(path, config_name)

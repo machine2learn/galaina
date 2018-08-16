@@ -8,6 +8,7 @@ EDGE_WEIGHT = 'EDGE_WEIGHT'
 PC_ALGORITHM = 'PC_ALGORITHM'
 PLOT_AND_DISPLAY = 'PLOT_AND_DISPLAY'
 input_paths_and_related_parameters = 'input_paths_and_related_parameters'
+output_paths = 'output_paths'
 
 
 def abs_path_of(rel_path):
@@ -34,6 +35,7 @@ class CustomConfigParser(configparser.ConfigParser):
 
         return abs_path_of(raw_get)
 
+
     def _from_info(self, param):
         return self.get(INFO, param)
 
@@ -51,6 +53,9 @@ class CustomConfigParser(configparser.ConfigParser):
 
     def _from_input_paths_and_related_parameters(self, param):
         return self.get(input_paths_and_related_parameters, param)
+
+    def _from_output_paths(self, param):
+        return self.get(output_paths, param)
 
     def get_path(self):
         return self._from_info('config_path')
@@ -139,39 +144,32 @@ class CustomConfigParser(configparser.ConfigParser):
     def get_input_path_directed_edges_blacklist(self):
         return self._from_input_paths_and_related_parameters('input_path_directed_edges_blacklist')
 
-    # def train_batch_size(self) -> int:
-    #     return int(self._from_training('batch_size'))
-    #
-    # def learning_rate(self) -> int:
-    #     return int(self._from_training('learning_rate'))
-    #
-    # def validation_batch_size(self) -> int:
-    #     return int(self._from_training('validation_batch_size'))
-    #
-    # def optimizer(self) -> str:
-    #     return self._from_training('optimizer')
-    #
-    # def l1_reqularization(self) -> float:
-    #     return float(self._from_training('l1_regularization'))
-    #
-    # def l2_reqularization(self) -> float:
-    #     return float(self._from_training('l2_regularization'))
-    #
-    # def num_epochs(self) -> int:
-    #     return int(self._from_training('num_epochs'))
-    #
-    # def hidden_layers(self):
-    #     return [int(x) for x in self.get('NETWORK', 'hidden_layers').split(',')]
-    #
-    #
-    # def training_path(self):
-    #     return abs_path_of(self._from_paths('train_file'))
-    #
-    # def validation_path(self):
-    #     return abs_path_of(self._from_paths('validation_file'))
-    #
-    # def targets(self):
-    #     return [x for x in self.get('TARGETS', 'targets').split(',')]
+    def get_output_path_merged_data(self):
+        return self._from_output_paths('output_path_merged_data')
+
+    def get_output_path_merged_factor_model_table(self):
+        return self._from_output_paths('output_path_merged_factor_model_table')
+
+    def get_output_path_merged_factor_model_loading(self):
+        return self._from_output_paths('output_path_merged_factor_model_loading')
+
+    def get_output_path_fig(self):
+        return self._from_output_paths('output_path_fig')
+
+    def get_output_path_log(self):
+        return self._from_output_paths('output_path_log')
+
+    def get_output_path_suffstat(self):
+        return self._from_output_paths('output_path_suffstat')
+
+    def get_output_path_pc_algo_obj(self):
+        return self._from_output_paths('output_path_pc_algo_obj')
+
+    def get_output_path_bn_strength_obj(self):
+        return self._from_output_paths('output_path_bn_strength_obj')
+
+    def get_output_path_avg_bn_obj(self):
+        return self._from_output_paths('output_path_avg_bn_obj')
 
 
 def read_config(path):

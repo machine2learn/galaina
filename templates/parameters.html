@@ -17,11 +17,9 @@
     <form action="/parameters" method="post" id="parameters">
         {{ form.csrf_token }}
         {{ render_field(form.plot_and_display) }}
-         {{ render_field(form.edge_weight) }}
+        {{ render_field(form.edge_weight) }}
         {{ render_field(form.pc_algorithm) }}
         {{ render_field(form.copula_factor) }}
-
-
         <button type="submit" formmethod="post" class="btn btn-primary">Submit</button>
 
     </form>
