@@ -20,6 +20,7 @@ from utils.db_ops import checklogin
 from utils.profile import new_dataset, set_dataset
 from utils.parameters_util import check_causal_discovery_ob, set_form
 from utils.sys_utils import delete_configs
+import python_r_pipeline
 
 from werkzeug.datastructures import ImmutableMultiDict
 
@@ -75,14 +76,33 @@ def parameters():
         sess.get_writer().populate_config(dict_parameters)
         sess.get_writer().write_config()
         return redirect(url_for('run'))
-    set_form(form, sess.get_writer())
+
+    set_form(form,  sess.get_writer())
     return render_template('parameters.html', form=form, page=1)
+
+
+from threading import Thread
+def threaded_function(writer, path):
+    python_r_pipeline.run(writer, path)
+
 
 
 @app.route('/run', methods=['GET', 'POST'])
 def run():
+    file = open('output.txt', 'w')
+    file.write("")
+    file.close()
     if request.method == 'POST':
-        print('im running')
+        path = sess.get_writer().get('info', 'config_path')
+        if 'r_front_end' not in sess.get_writer().keys():
+            sess.get_writer().add_item('r_front_end', 'path_r_binary_command', '/usr/local/bin/Rscript')
+            sess.get_writer().add_item('r_front_end', 'r_binary_options', '--vanilla')
+            sess.get_writer().add_item('r_front_end', 'path_r_last_part_program', os.path.join(APP_ROOT, 'R_code', '20180725_use_config_ini_final_part.R'))
+            sess.get_writer().add_item('r_front_end', 'path_r_infer_copula_factor_script',  os.path.join(APP_ROOT, 'R_code', 'my_inferCopulaFactorModel.R'))
+            sess.get_writer().write_config()
+        thread = Thread(target=threaded_function, args=(sess.get_writer().config, path))
+        thread.start()
+        thread.join()
     return render_template('run.html', page=2)
 
 
@@ -106,6 +126,18 @@ def show_pdf():
                                filename=filename
                                )
 
+@app.route('/stream')
+@login_required
+def stream():
+    try:
+        file = open('output.txt', 'r')
+        return jsonify(data=file.read())
+    except KeyError:
+        return ''
+    # try:
+    #     return jsonify(data=sess.log_file.read())
+    # except KeyError:
+    #     return ''
 
 @app.route('/delete_config', methods=['POST'])
 @login_required

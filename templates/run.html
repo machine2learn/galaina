@@ -25,12 +25,14 @@
             <a href="/show_pdf" target="_blank" class="btn btn-info">  Show pdf</a>
             <a href="/download_pdf" class="btn btn-info" download> <span id="span_run" class="glyphicon glyphicon-download-alt"></span> Download pdf</a>
         </div>
+
+        <div id="log" class="log"></div>
     </div>
 {% endblock %}
 
 {% block scripts %}
     {{ super() }}
     <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.16/sl-1.2.5/datatables.min.js"></script>
-{#    <script src="{{ url_for('.static', filename='run.js') }}"></script>#}
+    <script src="{{ url_for('.static', filename='run.js') }}"></script>
 {% endblock %}
 

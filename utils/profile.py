@@ -57,9 +57,11 @@ def get_configs_files(app_root, username, session):
             # TODO config reader to config writer
             config = read_config(os.path.join(user_path, user_dataset, config_file, 'config.ini'))
             configs[dataset_config] = {'name': config.get_name(), 'path': config.get_path(), 'bootstrap': ''}
-            if 'EDGE_WEIGHT' in config.sections():
-                configs[dataset_config]['bootstrap'] = config.get_bootstrap_n();
-
+            if 'edge_weight_algorithm' in config.sections():
+                configs[dataset_config]['bootstrap'] = config.get_bootstrap_n()
+            if 'copula_factor_algorithm' in config.sections():
+                configs[dataset_config]['gibbs_sampling_n'] = config.get_gibbs_sampling_n()
+                configs[dataset_config]['gibbs_burn_in_n'] = config.get_gibbs_burn_in_n()
         existing_datasets.append(user_dataset)
     return existing_datasets, user_configs, configs
 

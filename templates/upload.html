@@ -21,6 +21,12 @@
     <form action="/upload" method="post" enctype="multipart/form-data">
         <div class="row top-buffer" id="existingdataset-check">
             <div class="'col-lg-2">
+{#                Select an option to upload data:#}
+{#                <select id="existingdataset">#}
+{#                  <option value="new_files">New files</option>#}
+{#                  <option value="existing_files">Existing files</option>#}
+{#                </select>#}
+
                 <input type="checkbox" id="existingdataset" name="existingdataset"> <label for="existingdataset">Existing
                 dataset</label>
             </div>
@@ -86,7 +92,7 @@
                     <table id="dataset-table" class="table display table-striped table-bordered" style="width:100%">
                         <tfoot align="right">
                         <tr>
-                            <td colspan="3">Clear all configs <a data-id=all onclick="ConfirmDelete(this, true)">
+                            <td colspan="5">Clear all configs <a data-id=all onclick="ConfirmDelete(this, true)">
                                 <span class="glyphicon glyphicon-trash" style="color:#ff0000"></span></a>
                             </td>
                         </tr>

@@ -93,5 +93,5 @@ class PlotAndDisplayForm(FlaskForm):
 class GeneralParameterForm(FlaskForm):
     plot_and_display = FormField(PlotAndDisplayForm)
     pc_algorithm = FormField(PcAlgorithmForm)
-    copula_factor = FormField(CopulaFactorForm)
-    edge_weight = FormField(EdgeWeightForm)
+    copula_factor_algorithm = FormField(CopulaFactorForm)
+    edge_weight_algorithm = FormField(EdgeWeightForm)

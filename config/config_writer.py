@@ -6,13 +6,13 @@ from config import config_reader
 import os
 import configparser
 
-sections = ['INFO', 'COPULA_FACTOR', 'EDGE_WEIGHT', 'PC_ALGORITHM', 'PLOT_AND_DISPLAY',
+sections = ['info', 'copula_factor_algorithm', 'edge_weight_algorithm', 'pc_algorithm', 'plot_and_display',
             'input_paths_and_related_parameters', 'output_paths']
-INFO = 'INFO'
-COPULA_FACTOR = 'COPULA_FACTOR'
-EDGE_WEIGHT = 'EDGE_WEIGHT'
-PC_ALGORITHM = 'PC_ALGORITHM'
-PLOT_AND_DISPLAY = 'PLOT_AND_DISPLAY'
+info = 'info'
+copula_factor_algorithm = 'copula_factor_algorithm'
+EDGE_WEIGHT = 'edge_weight_algorithm'
+PC_ALGORITHM = 'pc_algorithm'
+PLOT_AND_DISPLAY = 'plot_and_display'
 input_paths_and_related_parameters = 'input_paths_and_related_parameters'
 output_paths = 'output_paths'
 
@@ -29,7 +29,8 @@ class ConfigWriter:
             print(k, value)
             if 'csrf_token' not in k:
                 section, key = k.split('-', 1)
-                result.append((section.upper(), key, value))
+                section  = section.lower()
+                result.append((section, key, value))
         return result
 
     def keys(self):
@@ -48,6 +49,27 @@ class ConfigWriter:
     def add_item(self, section, key, value):
         if section not in self.config.sections():
             self.config.add_section(section)
+        if section == 'pc_algorithm' or section == 'PC_ALGORITHM':
+            if key == 'indeptest':
+                key = 'indepTest'
+            if key == 'numcores':
+                key = 'numCores'
+            if key == 'fixedgaps':
+                key = 'fixedGaps'
+            if key == 'fixededges':
+                key = 'fixedEdges'
+            if key == 'addelete':
+                key = 'NAdelete'
+            if key == 'm_max':
+                key = 'm.max'
+            if key == 'm_max':
+                key = 'm.max'
+            if key == 'skel_method':
+                key = 'skel.method'
+            if key == 'maj_rule':
+                key = 'maj.rule'
+            if key == 'solve_confl':
+                key = 'solve.confl'
         self.config.set(section, key, value)
 
     def write_config(self):
@@ -63,9 +85,9 @@ class ConfigWriter:
             self.config.write(f)
 
     def create_config(self, name):
-        self.add_item('INFO', 'config_name', name)
-        self.add_item('INFO', 'config_path', self.path)
-        if 'INFO' not in config_reader.read_config(self.path).sections():
+        self.add_item('info', 'config_name', name)
+        self.add_item('info', 'config_path', self.path)
+        if 'info' not in config_reader.read_config(self.path).sections():
             self.write_config()
 
     def add_input_paths(self, dict_files):

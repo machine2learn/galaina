@@ -2,11 +2,11 @@ import configparser
 import os
 from typing import Dict
 
-INFO = 'INFO'
-COPULA_FACTOR = 'COPULA_FACTOR'
-EDGE_WEIGHT = 'EDGE_WEIGHT'
-PC_ALGORITHM = 'PC_ALGORITHM'
-PLOT_AND_DISPLAY = 'PLOT_AND_DISPLAY'
+info = 'info'
+copula_factor_algorithm = 'copula_factor_algorithm'
+edge_weight_algorithm = 'edge_weight_algorithm'
+pc_algorithm = 'pc_algorithm'
+plot_and_display = 'plot_and_display'
 input_paths_and_related_parameters = 'input_paths_and_related_parameters'
 output_paths = 'output_paths'
 
@@ -37,19 +37,19 @@ class CustomConfigParser(configparser.ConfigParser):
 
 
     def _from_info(self, param):
-        return self.get(INFO, param)
+        return self.get(info, param)
 
     def _from_copula_factor(self, param):
-        return self.get(COPULA_FACTOR, param)
+        return self.get(copula_factor_algorithm, param)
 
     def _from_edge_weight(self, param):
-        return self.get(EDGE_WEIGHT, param)
+        return self.get(edge_weight_algorithm, param)
 
     def _from_pc_algorithm(self, param):
-        return self.get(PC_ALGORITHM, param)
+        return self.get(pc_algorithm, param)
 
     def _from_plot_and_display(self, param):
-        return self.get(PLOT_AND_DISPLAY, param)
+        return self.get(plot_and_display, param)
 
     def _from_input_paths_and_related_parameters(self, param):
         return self.get(input_paths_and_related_parameters, param)

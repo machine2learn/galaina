@@ -9,10 +9,12 @@ function get_rows(dataset_name, user_configs, param_configs) {
         for (var i = 0; i < len; i++) {
             var config_name = user_configs[dataset_name][i];
             var bootstrap = param_configs[dataset_name + '_' + config_name]['bootstrap'];
+            var gibbs_sampling_n = param_configs[dataset_name + '_' + config_name]['gibbs_sampling_n'];
+            var gibbs_burn_in_n = param_configs[dataset_name + '_' + config_name]['gibbs_burn_in_n'];
             var delet_input = '<a data-id=' + config_name + ' onclick="ConfirmDelete(this, false)" ><span class="glyphicon glyphicon-remove"></span></a>';
-            my_rows.push([config_name, bootstrap, delet_input]);
+            my_rows.push([config_name, bootstrap,gibbs_sampling_n,gibbs_burn_in_n, delet_input]);
         }
-        my_rows.push(['new_config', '', '']);
+        my_rows.push(['new_config', '', '','','']);
     }
     return my_rows;
 }
@@ -22,12 +24,12 @@ function validate_new_submit() {
     var datasetname = $('#datasetname').val();
     // Check dataset name ! contains '_'
     if (datasetname.indexOf('_') >= 0) {
-        $('#error_text').text('Dataset name cannot contains "_".');7
+        $('#error_text').text('Dataset name cannot contains "_".');
         return false;
     }
     // Check dataset name ! exists
     if (appConfig.handle_key.user_datasets.indexOf(datasetname) >= 0) {
-        $('#error_text').text('Dataset name already exists.');7
+        $('#error_text').text('Dataset name already exists.');
         return false;
     }
     // Check exists input data and factor model files

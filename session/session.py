@@ -14,6 +14,11 @@ class Session:
         # self._config_reader = {}
         self._config = {}
         self._app = app
+        self.log_path = 'output.txt'
+        self.log_file = self.open_log()
+
+    def open_log(self):
+        return open(self.log_path, 'r')
 
     def add_user(self, user):
         self._config[user] = {}

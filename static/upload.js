@@ -20,7 +20,7 @@ $(document).ready(function () {
 
     var dataset_table = $('#dataset-table').DataTable({
         data: my_rows, 'select': 'single',
-        columns: [{title: 'Config Name'}, {title: 'Bootstrap'}, {title: '', width: "5%"}],
+        columns: [{title: 'Config Name'}, {title: 'Bootstrap'},  {title: 'Gibbs sampling n'}, {title: 'Gibbs burn in n'},{title: '', width: "5%"}],
         fixedHeader: true,
         footer: foot,
     }).draw(false);
