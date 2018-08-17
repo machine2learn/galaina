@@ -21,6 +21,7 @@ class ConfigWriter:
     def __init__(self, path, name):
         self.path = path
         self.config = CustomConfigParser()
+        self.config.optionxform = str
         self.create_config(name)
 
     def itemize(self, form):
