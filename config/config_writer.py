@@ -59,7 +59,7 @@ class ConfigWriter:
                 key = 'fixedGaps'
             if key == 'fixededges':
                 key = 'fixedEdges'
-            if key == 'addelete':
+            if key == 'nadelete':
                 key = 'NAdelete'
             if key == 'm_max':
                 key = 'm.max'
