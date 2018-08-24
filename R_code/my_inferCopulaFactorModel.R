@@ -16,7 +16,12 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
                                        plugin.threshold = 20, 
                                        plugin.marginal = (apply(Y, 2, function(x) {
                                        length(unique(x))}) > plugin.threshold), 
-                                       verb = TRUE, tol = .Machine$double.eps, first_random_seed = 1000, random_seed_update_parameter = 10) {
+                                       verb = TRUE, 
+                                       tol = .Machine$double.eps, 
+                                       first_random_seed = 1000, 
+                                       random_seed_update_parameter = 10,
+                                       fileConn = file("output.txt")
+                                       ) {
   #
   # This is the main function to perform inference for Gaussian copula factor models.
   # 
@@ -140,7 +145,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   }
   #dimnames(C.psamp) <- list(colnames(Y), colnames(Y), 1:floor(nsamp/odens))
 
-  fileConn <- file("output.txt")
+  # fileConn <- file("output.txt")
   #### start of Gibbs sampling scheme
   for (ns in 1:nsamp) {
     # message("Sampling Iteration: ", ns)  # FG
@@ -318,7 +323,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
       write(paste(tmp_log_str_v, collapse = " "), file=fileConn, append=TRUE)
     }
   }
-  close(fileConn)
+  # close(fileConn)
   #
   Z.pmean <- apply(Z.imp, c(1,2), mean)
   

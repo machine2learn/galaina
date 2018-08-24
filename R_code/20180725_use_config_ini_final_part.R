@@ -1,4 +1,10 @@
 #!/usr/bin/env Rscript
+
+print_and_append_to_log <- function(tmp_log_str_v, fileConn) {
+  cat(tmp_log_str_v)
+  write(paste(tmp_log_str_v, collapse = " "), file=fileConn, append=TRUE)
+}
+
 library(utils)
 library(tools)  # to get file extension
 library(dplyr)  # actually I load it only for filter
@@ -108,8 +114,11 @@ if (original_bootstrap_n >= 1) {
 }
 input_path_directed_edges_blacklist <- config$get(option = "input_path_directed_edges_blacklist", fallback = "", section = "input_paths_and_related_parameters")   # args[8]
 
-cat("Gibbs total samples:", gibbs_sampling_n, "\n")
-cat("Gibbs burn-in samples:", gibbs_burn_in_n, "\n")
+fileConn <- file("output.txt")  # TODO get it from config
+# cat("Gibbs total samples:", gibbs_sampling_n, "\n")
+# cat("Gibbs burn-in samples:", gibbs_burn_in_n, "\n")
+print_and_append_to_log(c("Gibbs total samples:", gibbs_sampling_n, "\n"), fileConn)
+print_and_append_to_log(c("Gibbs burn-in samples:", gibbs_burn_in_n, "\n"), fileConn)
 # cat("Bootstrap samples: ", bootstrap_n, "\n")
 
 # TODO future: use whitelist and blacklist
@@ -186,10 +195,13 @@ pc_parameters_ls <- list(
 for (iRun_n in 1:causal_discovery_algorithm_run_n) {
   ## 2.1 Bootstrap
   if (original_bootstrap_n < 1) {
-    cat("No bootstrap performed \n")
+    # cat("No bootstrap performed \n")
+    print_and_append_to_log(c("No bootstrap performed \n"), fileConn)
     tmp_run_data_df <- data_df
   } else {
-    cat("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n")
+    # cat("No bootstrap performed \n")
+    # cat("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n")
+    print_and_append_to_log(c("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
     set.seed(bootstrap_random_seed_n)
     tmp_run_data_df <- data_df[sample(nrow(data_df)), ]
     bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
@@ -202,7 +214,8 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
     nsamp = gibbs_sampling_n,
     odens = odens_n,  # Store each Gibbs sampling output
     first_random_seed = gibbs_first_random_seed_n,
-    random_seed_update_parameter = gibbs_random_seed_update_parameter_n
+    random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
+    fileConn = fileConn
   )  # , tol = 1e-22)
  
   # cat(dim(tmp_cop_fac_obj$Sigma.psamp), "\n")
@@ -362,9 +375,11 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
     run2pcalgo_ls[[iRun_n]] <- tmp_graph_cfpc
   } else {
     run2pcalgo_bad_ls[[iRun_n]] <- tmp_graph_cfpc
-    cat("Current graph removed because it contained", sum(tmp_blacklist_arcs_present_bv), "blacklisted directed edges", "\n")
+    # cat("Current graph removed because it contained", sum(tmp_blacklist_arcs_present_bv), "blacklisted directed edges", "\n")
+    print_and_append_to_log(c("Current graph removed because it contained", sum(tmp_blacklist_arcs_present_bv), "blacklisted directed edges", "\n"), fileConn)
     stopifnot(sum(tmp_blacklist_arcs_present_bv) > 0)
-    cat(dir_arc_blacklist_mat[tmp_blacklist_arcs_present_bv])
+    # cat(dir_arc_blacklist_mat[tmp_blacklist_arcs_present_bv])
+    print_and_append_to_log(c(dir_arc_blacklist_mat[tmp_blacklist_arcs_present_bv]), fileConn)
   }
   # saveRDS(graph_cfpc, file = args[8])
   cat('\n\n')
@@ -386,7 +401,8 @@ if (original_bootstrap_n < 1) {
   bn_obj <- as.bn(run2pcalgo_ls[[1]], check.cycles = FALSE)  # We are ok with cycles
 } else {
   removed_graph_due_to_blacklist_bv <- sapply(X = run2pcalgo_ls, FUN = is.null)
-  cat("Graphs removed due to incompatibility with blacklist", sum(removed_graph_due_to_blacklist_bv), "\n")
+  # cat("Graphs removed due to incompatibility with blacklist", sum(removed_graph_due_to_blacklist_bv), "\n")
+  print_and_append_to_log(c("Graphs removed due to incompatibility with blacklist", sum(removed_graph_due_to_blacklist_bv), "\n"), fileConn)
   bootstrapped_bnlearn_list <- lapply(
     X = run2pcalgo_ls[!removed_graph_due_to_blacklist_bv],  # Ignore NULL elements of the list
     # X = run2pcalgo_ls[!sapply(run2pcalgo_ls, is.null)],  # Ignore NULL elements of the list
@@ -547,3 +563,5 @@ if (original_bootstrap_n >= 1) {
 #   device = file_ext()
 # )
 dev.off()
+print_and_append_to_log(c("Completed", "\n"), fileConn)
+close(fileConn)
