@@ -19,7 +19,13 @@ $(document).ready(function () {
         })
 
 
-    })
+    });
+    $("#remove_button").click(function () {
+        if (!confirm("Remove dataset")) {
+               return false;
+        }
+    });
+
 
     var output = document.getElementById('log');
     setInterval(function () {
