@@ -4,6 +4,7 @@ from flask import session, redirect, url_for
 
 from config.config_writer import ConfigWriter
 # from config import config_reader
+import os
 
 CONFIG_NAME = 'config.ini'
 
@@ -15,10 +16,15 @@ class Session:
         self._config = {}
         self._app = app
         self.log_path = 'output.txt'
-        self.log_file = self.open_log()
+
+    def read_log(self):
+        return self.file_pointer.read()
 
     def open_log(self):
-        return open(self.log_path, 'r')
+        os.remove(self.log_path)
+        file = open(self.log_path, 'a')
+        file.close()
+        self.file_pointer = open(self.log_path)
 
     def add_user(self, user):
         self._config[user] = {}
@@ -33,16 +39,16 @@ class Session:
                 return redirect(url_for('login'))
             return session[user_id]
 
-    def create_config(self, path, name):
+    def create_config(self, path, name, dataset_name):
         user = self.get_session('user')
         config_path = os.path.join(path, CONFIG_NAME)
-        self._config_writer[user] = ConfigWriter(config_path, name)
+        self._config_writer[user] = ConfigWriter(config_path, name, dataset_name)
         # self._config_reader[user] = config_reader.read_config(config_path)
 
-    def set_config(self, path, name):
+    def set_config(self, path, name, dataset_name):
         user = self.get_session('user')
         config_path = os.path.join(path, CONFIG_NAME)
-        self._config_writer[user] = ConfigWriter(config_path, name)
+        self._config_writer[user] = ConfigWriter(config_path, name, dataset_name)
         # self._config_reader[user] = config_reader.read_config(config_path)
 
     def get_writer(self):

@@ -21,11 +21,11 @@
     <form action="/upload" method="post" enctype="multipart/form-data">
         <div class="row top-buffer" id="existingdataset-check">
             <div class="'col-lg-2">
-{#                Select an option to upload data:#}
-{#                <select id="existingdataset">#}
-{#                  <option value="new_files">New files</option>#}
-{#                  <option value="existing_files">Existing files</option>#}
-{#                </select>#}
+                {#                Select an option to upload data:#}
+                {#                <select id="existingdataset">#}
+                {#                  <option value="new_files">New files</option>#}
+                {#                  <option value="existing_files">Existing files</option>#}
+                {#                </select>#}
 
                 <input type="checkbox" id="existingdataset" name="existingdataset"> <label for="existingdataset">Existing
                 dataset</label>
@@ -45,6 +45,7 @@
                     <label for="datasetname">Dataset name : </label>
                     <input type="text" id="datasetname">
                 </div>
+
             </div>
             <div class="row top-buffer">
                 <div class="'col-lg-1" id="buttons-row" align="right">
@@ -72,7 +73,12 @@
                         </tr>
                         </tbody>
                     </table>
+
                 </div>
+            </div>
+            <div class="row top-buffer" id="remove_check_container">
+                <input type="checkbox" id="remove_check" name="remove_check" value="remove_check"/>
+                    <label for="remove_check"> Remove data after process</label>
             </div>
         </div>
 
@@ -101,7 +107,7 @@
                 </div>
             </div>
 
-            <div class="row top-buffer">
+            <div class="row top-buffer" align="right">
                 <input type="submit" value="Submit" class="btn btn-primary">
             </div>
         </div>

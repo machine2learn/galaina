@@ -87,7 +87,7 @@ class PcAlgorithmForm(FlaskForm):
 
 
 class PlotAndDisplayForm(FlaskForm):
-    core_plot_title_str = StringField("Core plot title", validators=[InputRequired()], default='Fake model')
+    core_plot_title_str = StringField("Core plot title", validators=[InputRequired()], default='Result')
 
 
 class GeneralParameterForm(FlaskForm):

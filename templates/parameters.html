@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% import 'bootstrap/wtf.html' as wtf %}
-{% from '_render_field.html' import render_field, render_single_field %}
+{% from '_render_field.html' import render_field, render_single_field , render_param_field %}
 
 {% block styles %}
     {{ super() }}
@@ -15,13 +15,41 @@
     </div>
 
     <form action="/parameters" method="post" id="parameters">
-        {{ form.csrf_token }}
-        {{ render_field(form.plot_and_display) }}
-        {{ render_field(form.edge_weight_algorithm) }}
-        {{ render_field(form.pc_algorithm) }}
-        {{ render_field(form.copula_factor_algorithm) }}
-        <button type="submit" formmethod="post" class="btn btn-primary">Submit</button>
 
+        <div class="container" id="plot_container">
+            <h3> Plot and display </h3>
+            {{ form.csrf_token }}
+            {{ render_param_field(form.plot_and_display) }}
+        </div>
+
+        <div class="container" id="dge_weight_container">
+            <h3> Edge Weight </h3>
+            {{ render_param_field(form.edge_weight_algorithm) }}
+            <input type="checkbox" id="edge_weight_check" name="edge_weight_check" value="Advanced_option"/>
+            <label for="Advanced_option">Advanced
+                Edge Weight Algorithm Options</label>
+        </div>
+
+        <div class="container" id="copula_factor_container">
+            <h3> Correlation Engine </h3>
+            {{ render_param_field(form.copula_factor_algorithm) }}
+        </div>
+        <div class="container" id="copula_factor_container_check">
+            <input type="checkbox" id="copula_factor_check" name="copula_factor_check" value="Advanced_option"/>
+            <label for="Advanced_option">Advanced Correlation Engine Options</label>
+        </div>
+
+        <div class="container" id="pc_algo_container">
+            <div id="pc_algo">
+                <h3> PC Algorithm</h3>
+                {{ render_param_field(form.pc_algorithm) }}
+            </div>
+            <input type="checkbox" id="pc_algo_check" name="pc_algo_check" value="Advanced_option"/>
+            <label for="Advanced_option">Advanced Causal Discovery Algorithm Options</label>
+        </div>
+        <div class="container" id="submit_container" align="right">
+            <button type="submit" formmethod="post" class="btn btn-primary">Submit</button>
+        </div>
     </form>
 
 {% endblock %}
@@ -29,5 +57,6 @@
 {% block scripts %}
     {{ super() }}
     <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.16/sl-1.2.5/datatables.min.js"></script>
+    <script src="{{ url_for('.static', filename='parameters.js') }}"></script>
 {% endblock %}
 

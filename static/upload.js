@@ -62,6 +62,7 @@ $(document).ready(function () {
     $('#existing-select').hide();
 
     $('#existingdataset').on('change', function () {
+        $('#remove_check_container').toggle();
         $('#existing-select').toggle();
         $('#existing-select-title').toggle();
         $('#datasetname-row').toggle();

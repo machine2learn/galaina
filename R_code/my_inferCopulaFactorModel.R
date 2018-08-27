@@ -140,7 +140,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   }
   #dimnames(C.psamp) <- list(colnames(Y), colnames(Y), 1:floor(nsamp/odens))
 
-  fileConn <- file("output.txt")
+  fileConn <- file("output.txt", 'a')
   #### start of Gibbs sampling scheme
   for (ns in 1:nsamp) {
     # message("Sampling Iteration: ", ns)  # FG

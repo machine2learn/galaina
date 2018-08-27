@@ -18,11 +18,11 @@ output_paths = 'output_paths'
 
 
 class ConfigWriter:
-    def __init__(self, path, name):
+    def __init__(self, path, name, dataset_name):
         self.path = path
         self.config = CustomConfigParser()
         self.config.optionxform = str
-        self.create_config(name)
+        self.create_config(name, dataset_name)
 
     def itemize(self, form):
         result = []
@@ -30,7 +30,7 @@ class ConfigWriter:
             print(k, value)
             if 'csrf_token' not in k:
                 section, key = k.split('-', 1)
-                section  = section.lower()
+                section = section.lower()
                 result.append((section, key, value))
         return result
 
@@ -85,7 +85,8 @@ class ConfigWriter:
         with open(self.path, 'wb') as f:
             self.config.write(f)
 
-    def create_config(self, name):
+    def create_config(self, name, dataset_name):
+        self.add_item('info', 'dataset_name', dataset_name)
         self.add_item('info', 'config_name', name)
         self.add_item('info', 'config_path', self.path)
         if 'info' not in config_reader.read_config(self.path).sections():
@@ -126,3 +127,27 @@ class ConfigWriter:
     def load_all_sections(self):
         for sec in sections:
             self.load_section(sec)
+
+    def add_remove(self, remove):
+        self.add_item('remove', 'remove', str(remove))
+
+    def add_r_front_end(self, APP_ROOT):
+        if 'r_front_end' not in self.keys():
+            self.add_item('r_front_end', 'path_r_binary_command', '/usr/local/bin/Rscript')
+            self.add_item('r_front_end', 'r_binary_options', '--vanilla')
+            self.add_item('r_front_end', 'path_r_last_part_program',
+                          os.path.join(APP_ROOT, 'R_code', '20180725_use_config_ini_final_part.R'))
+            self.add_item('r_front_end', 'path_r_infer_copula_factor_script',
+                          os.path.join(APP_ROOT, 'R_code', 'my_inferCopulaFactorModel.R'))
+            self.write_config()
+
+    def get_info(self):
+        path = self.get('info', 'config_path')
+        dataset_name = self.get('info', 'dataset_name')
+        return path, dataset_name
+
+    def get_remove(self):
+        return self.get('remove', 'remove') if 'remove' in self.keys() else False
+
+    def get_output_path_fig(self):
+        return self.get('output_paths', 'output_path_fig')

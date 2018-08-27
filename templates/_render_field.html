@@ -75,3 +75,38 @@
         </div>
     </div>
 {% endmacro %}
+
+{% macro render_param_field(field) %}
+{#    <h3><label> {{ field.label.text }} </label></h3>#}
+    {% set vars = {'count': 0} %} {# A bit strange, but this is how you change variable value inside loop #}
+
+    {%- for subfield in field %}
+        {% if not bootstrap_is_hidden_field(subfield) %}
+            {% if loop.index0 is divisibleby 2 %}
+                <div class="form-row">
+            {% endif %}
+            <div class="form-group col-md-6">
+            <div id="{{ subfield.name }}">
+                <label for="{{ subfield.name }}" class="control-label"  title="{{ subfield.description }}"  >{{ subfield.label.text }}</label>
+            {{ subfield(class_='form-control', **kwargs)|safe }}
+            <ul>
+                {% for error in subfield.errors %}
+                    <li style="color:red;">{{ error }}</li>
+                {% endfor %}
+            </ul>
+            </div>
+
+        </div>
+        {% if loop.index0 is not divisibleby 2 %}
+            </div>
+        {% endif %}
+            {% else  %}
+        {% endif %}
+        {% if vars.update({'count': loop.length}) %} {% endif %}
+    {%- endfor %}
+    {% if vars.count is divisibleby 2 %} {# one extra is for csrf, hence even #}
+        <div class="clearfix"></div>
+        </div>
+    {% endif %}
+    {{ field.hidden_tag() }}
+{% endmacro %}

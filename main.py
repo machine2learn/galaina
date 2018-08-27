@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask.json import jsonify
 from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
-
+from threading import Thread
 from login import LoginForm
 from register import RegisterForm
 from session.session import Session
@@ -19,7 +19,7 @@ from utils import profile
 from utils.db_ops import checklogin
 from utils.profile import new_dataset, set_dataset
 from utils.parameters_util import check_causal_discovery_ob, set_form
-from utils.sys_utils import delete_configs
+from utils.sys_utils import delete_configs, delete_dataset
 import python_r_pipeline
 
 from werkzeug.datastructures import ImmutableMultiDict
@@ -54,7 +54,8 @@ def upload():
             set_dataset(APP_ROOT, session['user'], request.form['existing-select'],
                         json.loads(request.form['selected_config'])[0], sess)
         else:
-            new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
+            new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess,
+                        'remove_check' in request.form)
         return redirect(url_for('parameters'))
     return render_template('/upload.html', page=0, user_dataset=user_dataset, user_configs=user_configs,
                            param_configs=param_configs)
@@ -68,6 +69,7 @@ def dataset_configs():
 
 @app.route('/parameters', methods=['GET', 'POST'])
 def parameters():
+    sess.open_log()
     form = GeneralParameterForm()
     if form.validate_on_submit():
         dict_parameters = request.form.to_dict()
@@ -77,30 +79,24 @@ def parameters():
         sess.get_writer().write_config()
         return redirect(url_for('run'))
 
-    set_form(form,  sess.get_writer())
+    set_form(form, sess.get_writer())
     return render_template('parameters.html', form=form, page=1)
 
 
-from threading import Thread
-def threaded_function(writer, path):
+def threaded_function(writer, path, dataset_name, username, remove):
     python_r_pipeline.run(writer, path)
-
+    if remove != 'False':
+        delete_dataset(username, dataset_name)
 
 
 @app.route('/run', methods=['GET', 'POST'])
 def run():
-    file = open('output.txt', 'w')
-    file.write("")
-    file.close()
     if request.method == 'POST':
-        path = sess.get_writer().get('info', 'config_path')
-        if 'r_front_end' not in sess.get_writer().keys():
-            sess.get_writer().add_item('r_front_end', 'path_r_binary_command', '/usr/local/bin/Rscript')
-            sess.get_writer().add_item('r_front_end', 'r_binary_options', '--vanilla')
-            sess.get_writer().add_item('r_front_end', 'path_r_last_part_program', os.path.join(APP_ROOT, 'R_code', '20180725_use_config_ini_final_part.R'))
-            sess.get_writer().add_item('r_front_end', 'path_r_infer_copula_factor_script',  os.path.join(APP_ROOT, 'R_code', 'my_inferCopulaFactorModel.R'))
-            sess.get_writer().write_config()
-        thread = Thread(target=threaded_function, args=(sess.get_writer().config, path))
+        path, dataset_name = sess.get_writer().get_info()
+        remove = sess.get_writer().get_remove()
+        sess.get_writer().add_r_front_end(APP_ROOT)
+        thread = Thread(target=threaded_function,
+                        args=(sess.get_writer().config, path, dataset_name, session['user'], remove))
         thread.start()
         thread.join()
     return render_template('run.html', page=2)
@@ -108,7 +104,7 @@ def run():
 
 @app.route("/download_pdf")
 def download_pdf():
-    pdf_path = sess.get_writer().get('output_paths', 'output_path_fig')
+    pdf_path = sess.get_writer().get_output_path_fig()
     filename = pdf_path.split('/')[-1]
     return send_file(pdf_path,
                      mimetype='text/csv',
@@ -118,7 +114,7 @@ def download_pdf():
 
 @app.route("/show_pdf")
 def show_pdf():
-    pdf_path = sess.get_writer().get('output_paths', 'output_path_fig')
+    pdf_path = sess.get_writer().get_output_path_fig()
     filename = pdf_path.split('/')[-1]
     directory = '/'.join(pdf_path.split('/')[:-1])
     return send_from_directory(directory=directory,
@@ -126,18 +122,15 @@ def show_pdf():
                                filename=filename
                                )
 
+
 @app.route('/stream')
 @login_required
 def stream():
     try:
-        file = open('output.txt', 'r')
-        return jsonify(data=file.read())
-    except KeyError:
+        return jsonify(data=sess.read_log())
+    except:
         return ''
-    # try:
-    #     return jsonify(data=sess.log_file.read())
-    # except KeyError:
-    #     return ''
+
 
 @app.route('/delete_config', methods=['POST'])
 @login_required
