@@ -5,7 +5,6 @@ from werkzeug.utils import secure_filename
 
 from config.config_reader import read_config
 from config.config_writer import ConfigWriter
-from utils.sys_utils import delete_entire_dataset
 DATASET_DEFAULT_NAME = 'dataset'
 USER_DATA = 'user_data'
 INPUT_DATA = 'input'
@@ -47,33 +46,26 @@ def get_configs_files(app_root, username, session):
     configs = {}
     user_path = os.path.join(app_root, USER_DATA, username)
     user_datasets = [dataset for dataset in os.listdir(user_path) if os.path.isdir(os.path.join(user_path, dataset))]
-    to_remove = []
+
     for user_dataset in user_datasets:
         user_configs[user_dataset] = [config for config in os.listdir(os.path.join(user_path, user_dataset)) if
                                       os.path.isdir(os.path.join(user_path, user_dataset, config))]
         for config_file in user_configs[user_dataset]:
             dataset_config = user_dataset + '_' + config_file
             config = read_config(os.path.join(user_path, user_dataset, config_file, 'config.ini'))
-            if 'remove' in config.sections() and config.get('remove', 'remove') =='True':
-                to_remove.append(user_dataset)
-            else:
-                user_configs[user_dataset].remove(INPUT_DATA)
-                user_configs[user_dataset].remove(FACTOR_MODEL)
-                configs[dataset_config] = {'name': config.get_name(), 'path': config.get_path(), 'bootstrap': ''}
-                configs[dataset_config]['bootstrap'] = '10'  # param by default
-                configs[dataset_config]['gibbs_sampling_n'] = '1000'  # param by default
-                configs[dataset_config]['gibbs_burn_in_n'] = '500'  # param by default
-                if 'edge_weight_algorithm' in config.sections():
-                    configs[dataset_config]['bootstrap'] = config.get_bootstrap_n()
-                if 'copula_factor_algorithm' in config.sections():
-                    configs[dataset_config]['gibbs_sampling_n'] = config.get_gibbs_sampling_n()
-                    configs[dataset_config]['gibbs_burn_in_n'] = config.get_gibbs_burn_in_n()
+            user_configs[user_dataset].remove(INPUT_DATA)
+            user_configs[user_dataset].remove(FACTOR_MODEL)
+            configs[dataset_config] = {'name': config.get_name(), 'path': config.get_path(), 'bootstrap': ''}
+            configs[dataset_config]['bootstrap'] = '10'  # param by default
+            configs[dataset_config]['gibbs_sampling_n'] = '1000'  # param by default
+            configs[dataset_config]['gibbs_burn_in_n'] = '500'  # param by default
+            if 'edge_weight_algorithm' in config.sections():
+                configs[dataset_config]['bootstrap'] = config.get_bootstrap_n()
+            if 'copula_factor_algorithm' in config.sections():
+                configs[dataset_config]['gibbs_sampling_n'] = config.get_gibbs_sampling_n()
+                configs[dataset_config]['gibbs_burn_in_n'] = config.get_gibbs_burn_in_n()
         existing_datasets.append(user_dataset)
 
-    for data_remove in to_remove:
-        existing_datasets.remove(data_remove)
-        del user_configs[data_remove]
-        delete_entire_dataset(username, data_remove)
     return existing_datasets, user_configs, configs
 
 
@@ -142,13 +134,12 @@ def get_files(APP_ROOT, username, dataset_name):
     return dict_files
 
 
-def save_new_config(dataset_name, APP_ROOT, username, sess, dict_files, remove):
+def save_new_config(dataset_name, APP_ROOT, username, sess, dict_files):
     config_name = define_new_config_file(dataset_name, APP_ROOT, username, sess)
-    sess.get_writer().add_remove(remove)
     sess.get_writer().add_input_paths(dict_files)
     sess.get_writer().add_output_paths(os.path.join(APP_ROOT, USER_DATA, username, dataset_name, config_name))
 
-def new_dataset(dataset_name, filenames, APP_ROOT, username, sess, remove):
+def new_dataset(dataset_name, filenames, APP_ROOT, username, sess):
     dataset_name = generate_dataset_name(APP_ROOT, username, dataset_name)
     destination = os.path.join(APP_ROOT, USER_DATA, username, dataset_name)
     if not os.path.isdir(destination):
@@ -156,7 +147,7 @@ def new_dataset(dataset_name, filenames, APP_ROOT, username, sess, remove):
         os.makedirs(os.path.join(destination, INPUT_DATA), exist_ok=True)
         os.makedirs(os.path.join(destination, FACTOR_MODEL), exist_ok=True)
     dict_files = save_files(destination, filenames)
-    save_new_config(dataset_name, APP_ROOT, username, sess, dict_files, remove)
+    save_new_config(dataset_name, APP_ROOT, username, sess, dict_files)
 
     return True
 
@@ -164,7 +155,7 @@ def new_dataset(dataset_name, filenames, APP_ROOT, username, sess, remove):
 def set_dataset(APP_ROOT, username, dataset_name, config_name, sess):
     if config_name == 'new_config':
         dict_files = get_files(APP_ROOT, username, dataset_name)
-        save_new_config(dataset_name, APP_ROOT, username, sess, dict_files, False)
+        save_new_config(dataset_name, APP_ROOT, username, sess, dict_files)
         return True
     path = os.path.join(APP_ROOT, USER_DATA, username, dataset_name, config_name)
     sess.create_config(path, config_name, dataset_name)

@@ -114,7 +114,7 @@ if (original_bootstrap_n >= 1) {
 }
 input_path_directed_edges_blacklist <- config$get(option = "input_path_directed_edges_blacklist", fallback = "", section = "input_paths_and_related_parameters")   # args[8]
 
-fileConn <- file("output.txt")  # TODO get it from config
+fileConn <- file("output.txt", 'a')  # TODO get it from config
 # cat("Gibbs total samples:", gibbs_sampling_n, "\n")
 # cat("Gibbs burn-in samples:", gibbs_burn_in_n, "\n")
 print_and_append_to_log(c("Gibbs total samples:", gibbs_sampling_n, "\n"), fileConn)

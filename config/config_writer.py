@@ -128,9 +128,6 @@ class ConfigWriter:
         for sec in sections:
             self.load_section(sec)
 
-    def add_remove(self, remove):
-        self.add_item('remove', 'remove', str(remove))
-
     def add_r_front_end(self, APP_ROOT):
         if 'r_front_end' not in self.keys():
             self.add_item('r_front_end', 'path_r_binary_command', '/usr/local/bin/Rscript')
@@ -146,8 +143,6 @@ class ConfigWriter:
         dataset_name = self.get('info', 'dataset_name')
         return path, dataset_name
 
-    def get_remove(self):
-        return self.get('remove', 'remove') if 'remove' in self.keys() else False
 
     def get_output_path_fig(self):
         return self.get('output_paths', 'output_path_fig')

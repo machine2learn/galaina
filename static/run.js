@@ -17,6 +17,8 @@ $(document).ready(function () {
                 document.getElementById("run_button").classList.add('btn-success');
             }
         })
+
+
     })
 
     var output = document.getElementById('log');

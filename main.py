@@ -54,8 +54,7 @@ def upload():
             set_dataset(APP_ROOT, session['user'], request.form['existing-select'],
                         json.loads(request.form['selected_config'])[0], sess)
         else:
-            new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess,
-                        'remove_check' in request.form)
+            new_dataset(request.form['datasetname'], request.files, APP_ROOT, session['user'], sess)
         return redirect(url_for('parameters'))
     return render_template('/upload.html', page=0, user_dataset=user_dataset, user_configs=user_configs,
                            param_configs=param_configs)
@@ -83,23 +82,25 @@ def parameters():
     return render_template('parameters.html', form=form, page=1)
 
 
-def threaded_function(writer, path, dataset_name, username, remove):
+def threaded_function(writer, path):
     python_r_pipeline.run(writer, path)
-    if remove != 'False':
-        delete_dataset(username, dataset_name)
 
 
 @app.route('/run', methods=['GET', 'POST'])
 def run():
     if request.method == 'POST':
+        if 'remove_button' in request.form:
+            _, dataset = sess.get_writer().get_info()
+            delete_dataset(APP_ROOT, session['user'], dataset)
+            return redirect(url_for('upload'))
         path, dataset_name = sess.get_writer().get_info()
-        remove = sess.get_writer().get_remove()
         sess.get_writer().add_r_front_end(APP_ROOT)
         thread = Thread(target=threaded_function,
-                        args=(sess.get_writer().config, path, dataset_name, session['user'], remove))
+                        args=(sess.get_writer().config, path))
         thread.start()
         thread.join()
     return render_template('run.html', page=2)
+
 
 
 @app.route("/download_pdf")
@@ -138,6 +139,9 @@ def delete_config():
     delete_configs(request.get_json()['config'], request.get_json()['dataset'], session['user'])
     user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
     return jsonify(param_configs=param_configs, user_configs=user_configs)
+
+
+
 
 
 @login_manager.user_loader
