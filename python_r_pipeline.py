@@ -10,7 +10,7 @@ import subprocess
 import configparser
 
 # from collections import OrderedDict
-# import 
+# import
 
 # import numpy as np
 import pandas as pd
@@ -113,6 +113,22 @@ class MyConfigReader:
 # create object as
 # factorInfo = FactorInfoFactory(factor_df).factory()
 class FactorInfoFactory:
+    # TODO modify it to create factor model for unstructured vraible when no factor model type is provided
+    # TODO look at those old Jupyter Notebook functions
+# def initialize_factor_model(data_df):
+#       return pd.DataFrame(
+#         index=pd.Index(data=data_df.columns, name='Variable'),
+#         columns=['Factor', 'Loading']
+#     )
+#
+# def initialize_unstructured_info2df(data_df, name='unstructured'):
+#     return {'name': name, 'data_df': data_df, 'factor_model_df': create_factor_model_for_unstructured_data(data_df)}
+#
+# def create_factor_model_for_unstructured_data(data_df):  # could use initialize_factor_model
+#     factor_model_df = initialize_factor_model(data_df)
+#     factor_model_df.loc[factor_model_df.index, 'Factor'] = factor_model_df.index
+#     factor_model_df['Loading'] = 1.0
+#     return factor_model_df
 
     # def __init__(self):
     def __init__(self, factor_df):
