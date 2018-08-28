@@ -17,13 +17,13 @@
     <form action="/parameters" method="post" id="parameters">
 
         <div class="container" id="plot_container">
-            <h3> Plot and display </h3>
+            <h3> Plot and Display </h3>
             {{ form.csrf_token }}
             {{ render_param_field(form.plot_and_display) }}
         </div>
 
         <div class="container" id="dge_weight_container">
-            <h3> Edge Weight </h3>
+            <h3> Edge Weights </h3>
             {{ render_param_field(form.edge_weight_algorithm) }}
             <input type="checkbox" id="edge_weight_check" name="edge_weight_check" value="Advanced_option"/>
             <label for="Advanced_option">Advanced

@@ -6,27 +6,27 @@ from wtforms import StringField
 
 
 class CopulaFactorForm(FlaskForm):
-    gibbs_sampling_n = IntegerField("Gibbs sampling", validators=[InputRequired()], default=1000, description="")
-    gibbs_burn_in_n = IntegerField("Gibbs burn in", validators=[InputRequired()], default=500, description="")
-    gibbs_first_random_seed_n = IntegerField("Gibbs first random seed", validators=[InputRequired()], default=365,
+    gibbs_sampling_n = IntegerField("Number of Gibbs samples", validators=[InputRequired()], default=1000, description="")
+    gibbs_burn_in_n = IntegerField("Number of Gibbs burn-in samples", validators=[InputRequired()], default=500, description="")
+    gibbs_first_random_seed_n = IntegerField("Gibbs sampling first random seed", validators=[InputRequired()], default=365,
                                              description="")
-    gibbs_random_seed_update_parameter_n = IntegerField("Gibbs random seed update parameter",
+    gibbs_random_seed_update_parameter_n = IntegerField("Gibbs sampling random seed update parameter",
                                                         validators=[InputRequired()], default=10, description="")
 
 
 class EdgeWeightForm(FlaskForm):
-    bootstrap_n = IntegerField("Bootstrap", validators=[InputRequired()], default=10, description="")
-    bootstrap_first_random_seed_n = IntegerField("Bootstrap first random seed", validators=[InputRequired()],
+    bootstrap_n = IntegerField("Number of bootstrap samples", validators=[InputRequired()], default=10, description="")
+    bootstrap_first_random_seed_n = IntegerField("Bootstrapping first random seed", validators=[InputRequired()],
                                                  default=100,
                                                  description="")
-    bootstrap_random_seed_update_parameter_n = IntegerField("Bootstrap random seed update parameter",
+    bootstrap_random_seed_update_parameter_n = IntegerField("Bootstrapping random seed update parameter",
                                                             validators=[InputRequired()], default=10, description="")
 
 
 class PcAlgorithmForm(FlaskForm):
     # causal_discovery_observation_n : when “automatic” is selected,
     #  the `INI` file will have the line `causal_discovery_observation_n=0`
-    causal_discovery_observation_n = StringField("Causal discovery observation",
+    causal_discovery_observation_n = StringField("Causal discovery observation number",
                                                  validators=[InputRequired(),
                                                              Regexp(r'^(\d+|[aA][uU][tT][oO][mM][aA][tT][iI][cC])$')],
                                                  default='automatic', description="")
