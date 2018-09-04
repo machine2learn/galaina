@@ -13,8 +13,7 @@ from session.session import Session
 from user import User
 from db import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-
+from flask_login import LoginManager, login_user, login_required, logout_user
 from utils import profile
 from utils.db_ops import checklogin
 from utils.profile import new_dataset, set_dataset
@@ -173,10 +172,9 @@ def signup():
 
 
 @app.route('/logout')
-@login_required
 def logout():
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 
 def create_all():

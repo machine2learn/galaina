@@ -657,7 +657,7 @@ table.dataTable tfoot th, table.dataTable tfoot td {
     text-align: left;
     word-break: normal;
     white-space: pre-wrap;
-    height: 200px;
+    height: 400px;
     overflow: scroll;
     background-color: #2b2b2b;
     color: #ecf5f0;
