@@ -8,14 +8,12 @@ def delete_configs(config, dataset, username):
     else:
         paths = [os.path.join('user_data', username, dataset, d) for d in
                  os.listdir(os.path.join('user_data', username, dataset)) if
-                 os.path.isdir(os.path.join('user_data', username, dataset, d))]
+                 os.path.isdir(os.path.join('user_data', username, dataset, d)) and d != 'input' and d != 'factor']
     for path in paths:
         shutil.rmtree(path)
 
 
 def delete_dataset(APP_ROOT, username, dataset):
-    path = os.path.join(APP_ROOT,'user_data', username, dataset)
+    path = os.path.join(APP_ROOT, 'user_data', username, dataset)
     print('removing ...' + str(path))
     shutil.rmtree(path)
-
-
