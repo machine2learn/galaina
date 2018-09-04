@@ -13,6 +13,7 @@ from session.session import Session
 from user import User
 from db import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_login import LoginManager, login_user, login_required, logout_user
 from utils import profile
 from utils.db_ops import checklogin
@@ -47,7 +48,7 @@ def main():
 @login_required
 def upload():
     sess.reset_user()
-    user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'], session)
+    user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
     if request.method == 'POST':
         if 'existingdataset' in request.form and request.form['existingdataset'] == 'on':
             set_dataset(APP_ROOT, session['user'], request.form['existing-select'],
@@ -138,9 +139,6 @@ def delete_config():
     delete_configs(request.get_json()['config'], request.get_json()['dataset'], session['user'])
     user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
     return jsonify(param_configs=param_configs, user_configs=user_configs)
-
-
-
 
 
 @login_manager.user_loader
