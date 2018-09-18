@@ -18,6 +18,7 @@ library(BDgraph)
 library(pcalg)  # depends on bioconductor
 library(bnlearn)
 library(ConfigParser)  # GPL-
+library(Rgraphviz)  # for using toDot
 # library(configr)  # alternative to package above
 
 
@@ -31,7 +32,10 @@ library(ConfigParser)  # GPL-
 # After merging snap_other <- snap_teacher + snap_mother + snap_father
 # args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo.ini")
 # args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo_less_null.ini")
-# args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo_relaxed_less_null.ini")
+args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo_relaxed_less_null.ini")
+
+fileConn <- file("output.txt", 'a')  # TODO get it from config
+sink(file = fileConn, append = TRUE, type='message')  # future: unset type and use sink for managing outptu. Modify print_and_append_to_log because it could become redundant
 
 args <- commandArgs(trailingOnly=TRUE)  # uncomment for taking config path argument from Python
 config <- ConfigParser$new(Sys.getenv(), optionxform=identity)
@@ -88,7 +92,7 @@ gibbs_burn_in_n <- as.integer(
 #
 gibbs_first_random_seed_n <- as.integer(
   config$getfloat(option = "gibbs_first_random_seed_n", section = "copula_factor_algorithm")
-)     # 365  # TODO make it a option in INI
+)     # 365 
 # gibbs_random_seed_update_parameter_n <- 10  # TODO see if it should be a option in INI
 gibbs_random_seed_update_parameter_n <- as.integer(
   config$getfloat(option = "gibbs_random_seed_update_parameter_n", section = "copula_factor_algorithm")
@@ -105,7 +109,7 @@ if (original_bootstrap_n >= 1) {
   bootstrap_first_random_seed_n <- as.integer(
     config$getfloat(option = "bootstrap_first_random_seed_n", section = "edge_weight_algorithm")
     # args[6]
-  ) #100  # TODO make it a option in INI
+  ) #100 
   bootstrap_random_seed_update_parameter_n <- as.integer(
     config$getfloat(option = "bootstrap_random_seed_update_parameter_n", section = "edge_weight_algorithm")
     # args[6]
@@ -114,7 +118,6 @@ if (original_bootstrap_n >= 1) {
 }
 input_path_directed_edges_blacklist <- config$get(option = "input_path_directed_edges_blacklist", fallback = "", section = "input_paths_and_related_parameters")   # args[8]
 
-fileConn <- file("output.txt", 'a')  # TODO get it from config
 # cat("Gibbs total samples:", gibbs_sampling_n, "\n")
 # cat("Gibbs burn-in samples:", gibbs_burn_in_n, "\n")
 print_and_append_to_log(c("Gibbs total samples:", gibbs_sampling_n, "\n"), fileConn)
@@ -383,6 +386,12 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
   }
   # saveRDS(graph_cfpc, file = args[8])
   cat('\n\n')
+  # Save temporary output
+  output_path_pc_algo_obj <- config$get(option = "output_path_pc_algo_obj", fallback = "", section = "output_paths")
+  if (!stri_isempty(output_path_pc_algo_obj)) {
+    tmp_out_path <- paste0(file_path_sans_ext(output_path_pc_algo_obj), '_', iRun_n ,'.', file_ext(output_path_pc_algo_obj))
+    saveRDS(run2pcalgo_ls, file = tmp_out_path)
+  }
 }
 cat('\n')
 
@@ -494,8 +503,23 @@ first_title <- main_plot_title_str  # 'Causal graph with all edges'
 # cat(first_title, "\n")
 # if (show_graph_before_bgk_application_b) {
 if (original_bootstrap_n >= 1) {
-  strength.plot(x = avg_bn_obj, strength = bn_strength_obj, threshold = attributes(bn_strength_obj)$threshold, main = first_title)
+  # TODO - output to var, convert to bn <- strength (if needed), convert to DOT format or other and save to path specified in INI
+  graph_nel <- strength.plot(x = avg_bn_obj, strength = bn_strength_obj, 
+    threshold = attributes(bn_strength_obj)$threshold, main = first_title)
+  # fix edge
+  tmp_key_v <- names(graph_nel@renderInfo@edges[["lwd"]])
+  lwd_key2data_key <- as.list(setNames(object = gsub("[~]", "|", tmp_key_v), nm = tmp_key_v ))
+  for (iName in names(lwd_key2data_key)) {
+    graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]] <- graph_nel@renderInfo@edges[["lwd"]][[iName]]
+    # cat(c(graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]], "\n"))
+  }
+  # TODO fix it
+  # library(Rgraphviz)
+  # toDot(graph = graph_nel, filename = 'graph_output.gv')
+  #
+  # TODO make it store edge weight toDotR(G = graph_nel, outDotFile = "~/Documents/figures/estonian.gv")
 } else {
+  # TODO - output to var, convert and save it
   plot(run2pcalgo_ls[[1]], main = first_title)  # if 
 }
 # }
@@ -564,4 +588,5 @@ if (original_bootstrap_n >= 1) {
 # )
 dev.off()
 print_and_append_to_log(c("Completed", "\n"), fileConn)
+sink(type="message")  # reset message and output sink
 close(fileConn)
