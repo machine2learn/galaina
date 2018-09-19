@@ -14,7 +14,7 @@ from user import User
 from db import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-
+from flask_login import LoginManager, login_user, login_required, logout_user
 from utils import profile
 from utils.db_ops import checklogin
 from utils.profile import new_dataset, set_dataset
@@ -48,7 +48,7 @@ def main():
 @login_required
 def upload():
     sess.reset_user()
-    user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'], session)
+    user_dataset, user_configs, param_configs = profile.get_configs_files(APP_ROOT, session['user'])
     if request.method == 'POST':
         if 'existingdataset' in request.form and request.form['existingdataset'] == 'on':
             set_dataset(APP_ROOT, session['user'], request.form['existing-select'],
@@ -141,9 +141,6 @@ def delete_config():
     return jsonify(param_configs=param_configs, user_configs=user_configs)
 
 
-
-
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -173,10 +170,9 @@ def signup():
 
 
 @app.route('/logout')
-@login_required
 def logout():
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 
 def create_all():

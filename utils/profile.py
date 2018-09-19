@@ -40,7 +40,7 @@ def find_all_datasets(app_root, username):
             if os.path.isdir(os.path.join(app_root, USER_DATA, username, a))]
 
 
-def get_configs_files(app_root, username, session):
+def get_configs_files(app_root, username):
     user_configs = {}
     existing_datasets = []
     configs = {}
@@ -50,11 +50,13 @@ def get_configs_files(app_root, username, session):
     for user_dataset in user_datasets:
         user_configs[user_dataset] = [config for config in os.listdir(os.path.join(user_path, user_dataset)) if
                                       os.path.isdir(os.path.join(user_path, user_dataset, config))]
+        if INPUT_DATA in user_configs[user_dataset]:
+            user_configs[user_dataset].remove(INPUT_DATA)
+        if FACTOR_MODEL in user_configs[user_dataset]:
+            user_configs[user_dataset].remove(FACTOR_MODEL)
         for config_file in user_configs[user_dataset]:
             dataset_config = user_dataset + '_' + config_file
             config = read_config(os.path.join(user_path, user_dataset, config_file, 'config.ini'))
-            user_configs[user_dataset].remove(INPUT_DATA)
-            user_configs[user_dataset].remove(FACTOR_MODEL)
             configs[dataset_config] = {'name': config.get_name(), 'path': config.get_path(), 'bootstrap': ''}
             configs[dataset_config]['bootstrap'] = '10'  # param by default
             configs[dataset_config]['gibbs_sampling_n'] = '1000'  # param by default

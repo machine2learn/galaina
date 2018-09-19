@@ -38,7 +38,7 @@ $(document).ready(function () {
     });
 
     // $("form").submit(function () {
-    //     if (document.getElementsByName('copula_factor_algorithm-gibbs_burn_in_n')[0].value < document.getElementsByName('copula_factor_algorithm-gibbs_sampling_n')[0].value) {
+    //     if (document.getElementsByName('copula_factor_algorithm-gibbs_burn_in_n')[0].value > document.getElementsByName('copula_factor_algorithm-gibbs_sampling_n')[0].value) {
     //         alert('ERROR :  Gibbs burn in < Gibbs sampling is not TRUE')  ;
     //         return false;
     //     }
