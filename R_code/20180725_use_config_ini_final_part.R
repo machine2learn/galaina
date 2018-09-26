@@ -206,7 +206,7 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
     # cat("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n")
     print_and_append_to_log(c("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
     set.seed(bootstrap_random_seed_n)
-    tmp_run_data_df <- data_df[sample(nrow(data_df)), ]
+    tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
     bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
   }
  
@@ -505,7 +505,8 @@ first_title <- main_plot_title_str  # 'Causal graph with all edges'
 if (original_bootstrap_n >= 1) {
   # TODO - output to var, convert to bn <- strength (if needed), convert to DOT format or other and save to path specified in INI
   graph_nel <- strength.plot(x = avg_bn_obj, strength = bn_strength_obj, 
-    threshold = attributes(bn_strength_obj)$threshold, main = first_title)
+    # threshold = attributes(bn_strength_obj)$threshold, # No need to specify the thershold
+    main = first_title)
   # fix edge
   tmp_key_v <- names(graph_nel@renderInfo@edges[["lwd"]])
   lwd_key2data_key <- as.list(setNames(object = gsub("[~]", "|", tmp_key_v), nm = tmp_key_v ))

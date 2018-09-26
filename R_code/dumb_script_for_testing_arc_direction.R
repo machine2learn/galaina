@@ -31,6 +31,11 @@ bn_strength_obj <- readRDS(path_to_bn_strength_obj)
 path_to_avg_bn_obj <- config$get(option = "output_path_avg_bn_obj", fallback = "", section = "output_paths")
 avg_bn_obj <- readRDS(path_to_avg_bn_obj)
 
+# graph_nel <- strength.plot(x = avg_bn_obj, strength = bn_strength_obj, 
+#                            # threshold = attributes(bn_strength_obj)$threshold, main = first_title
+#                            )
+
+
 causal_discovery_algorithm_run_n <- length(run2pcalgo_ls)
 # run2directed_amat_ls <- vector(mode = "list", length = causal_discovery_algorithm_run_n)
 # run2undirected_amat_ls <- vector(mode = "list", length = causal_discovery_algorithm_run_n)
@@ -167,7 +172,12 @@ denominator_mark_score_mat <- numerator_mark_score_mat + avg_undirected_amat
 mark_score_mat <- numerator_mark_score_mat
 mark_score_mat[numerator_mark_score_mat != 0] <- mark_score_mat[numerator_mark_score_mat != 0] / denominator_mark_score_mat[numerator_mark_score_mat != 0]
 
-# TODO implenet my arc strength. But don't use it now because otherwise we'll have to find a way to create a a new bn_strength_obj with:
+# Implemet my arc strength. But don't use it now because otherwise maybe we'll have to find a way to create a a new bn_strength_obj with:
+arc_strength_mat <- 0.5 * (avg_undirected_amat + avg_double_circle_amat + avg_double_arrow_amat) + avg_single_arrow_amat + avg_single_circle_amat
+arc_strength_mat <- arc_strength_mat + t(arc_strength_mat)
+
+# amat2arcs
+
 # - this new strength
 # - newly def direction
 # And new strength means that the threshold would have to be computed again
