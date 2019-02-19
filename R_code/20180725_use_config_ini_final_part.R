@@ -32,7 +32,8 @@ library(Rgraphviz)  # for using toDot
 # After merging snap_other <- snap_teacher + snap_mother + snap_father
 # args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo.ini")
 # args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo_less_null.ini")
-args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo_relaxed_less_null.ini")
+#
+# args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo_relaxed_less_null.ini")
 
 fileConn <- file("output.txt", 'a')  # TODO get it from config
 sink(file = fileConn, append = TRUE, type='message')  # future: unset type and use sink for managing outptu. Modify print_and_append_to_log because it could become redundant
@@ -204,10 +205,22 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
   } else {
     # cat("No bootstrap performed \n")
     # cat("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n")
-    print_and_append_to_log(c("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
+    #
     set.seed(bootstrap_random_seed_n)
+    # if (perform_bootstrap_b) {
+    #     iteration_tag_str <- "bootstrap iteration"
+    #     iteration_rows_id <- sample(nrow(data_df), replace = TRUE)
+    #     # tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
+    # } else {
+    #     iteration_tag_str <- "iteration without bootstrap"
+    #     iteration_rows_id <- seq(nrow(data_df))
+    #     # tmp_run_data_df <- data_df  # no bootstrap
+    # }
+    print_and_append_to_log(c("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
     tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
     bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
+    # TODO use instead
+    # tmp_run_data_df <- data_df[iteration_rows_id, ]
   }
  
   ## 2.2 Perform inference

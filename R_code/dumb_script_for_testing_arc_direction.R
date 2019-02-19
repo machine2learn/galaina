@@ -22,6 +22,9 @@ args <- c("/Users/fabio/projects/aggressotype/code/galaina/user_data/test/rpq/co
 config <- ConfigParser$new(Sys.getenv(), optionxform=identity)
 config$read(filepath = args[1])
 
+output_path_suffstat <- config$get(option = "output_path_suffstat", section = "output_paths" )
+run2suffstat_ls <- readRDS(output_path_suffstat)
+
 path_pc_algo_obj <- config$get(option = "output_path_pc_algo_obj", section = "output_paths" )
 run2pcalgo_ls <- readRDS(path_pc_algo_obj)
 
@@ -161,8 +164,11 @@ avg_single_arrow_amat <- avg_alt_single_arrow_amat + avg_single_arrow_amat
 
 # Used just to see if it is ok
 asym_score_mat <- avg_single_arrow_amat + 0.75 * avg_single_circle_amat
-numerator_dir_score_mat <- asym_score_mat + 0.5 * avg_undirected_amat + avg_double_arrow_amat
-denominator_dir_score_mat <-  asym_score_mat + t(asym_score_mat) + avg_undirected_amat + avg_double_arrow_amat
+# Wrong formula, undirected and double arrow are the same
+# numerator_dir_score_mat <- asym_score_mat + 0.5 * avg_undirected_amat + avg_double_arrow_amat
+# denominator_dir_score_mat <-  asym_score_mat + t(asym_score_mat) + avg_undirected_amat + avg_double_arrow_amat
+numerator_dir_score_mat <- asym_score_mat + 0.5 * (avg_undirected_amat + avg_double_arrow_amat)
+denominator_dir_score_mat <-  asym_score_mat + t(asym_score_mat) + 0.5 * (avg_undirected_amat + avg_double_arrow_amat)
 dir_score_mat <- numerator_dir_score_mat
 dir_score_mat[numerator_dir_score_mat != 0] <- dir_score_mat[numerator_dir_score_mat != 0] / denominator_dir_score_mat[numerator_dir_score_mat != 0]
 

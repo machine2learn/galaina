@@ -68,7 +68,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   # index of factors with multiple indicators
   index.2 <- which(colSums(Lambda) > 1)
   # No. of factors with multiple indicators
-  k2 <- length(index.2)  # TODO actually maybe is assuming that the factors with multiple indicators are the second ones. THey are in X by construction
+  k2 <- length(index.2)  # TODO actually maybe is assuming that the factors with multiple indicators are come after the oens with single indicator. THey are in X by construction
   ## get the pior graph G
   G1 <- matrix(1, k, k) - diag(k)
   if (k1 == 0) {
@@ -94,7 +94,10 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   Ranks <- apply(Y, 2, rank, ties.method = "average", na.last = "keep")
   N <- apply(!is.na(Ranks), 2, sum)
   U <- t(t(Ranks)/(N + 1))
-  Z <- qnorm(U)
+  Z <- qnorm(U)  # FG matrix of size n, (k1 + k2)
+  # FG Z is made my a column-concatenation of [Z_1 , Z_2]
+  # FG Z_1 is matrix with the factors with single indicators (corresponding to unstructured variables)
+  # FG Z_2 is matrix with the factors with multiple indicators
   # # handle categorical variable
   # Z[, ind.cat] = Y[, ind.cat]
   #
@@ -124,7 +127,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   # If k1 = 0 there is no eta1
   # X = matrix n x (0 + k2 + p) = n x p+k2
   # if k1 > 0
-  S <- cov(X)  # FG initialize the covaraince matrix
+  S <- cov(X)  # FG initialize the covariance matrix
   if (n < p) {
     S <- S + S0  # otherwise it would be singular
   }  # FG
@@ -152,14 +155,22 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     ## sample Z1 (=eta1)
     # FG these are the factors with single indicator (dummy factors), that are identical to the unstructured variables
     for (j in index.1) {
-      # if (!(j %in% ind.cat)){
+      # if (!(j %in% ind.cat)) {
       ind.tmp <- (1:k)[-j]  # FG k =  k1 + k2 = nr factors
       Sjc <- S[j, ind.tmp] %*% solve(S[ind.tmp, ind.tmp], tol = tol)  # FG
       sdj <- sqrt(S[j, j] - Sjc %*% S[ind.tmp, j])
       muj <- X[, ind.tmp] %*% t(Sjc)
+      not_na_in_r_j_bv <- !is.na(R[, j]) # FG could actually check is not all TRUE before computing stuff above but it should never happen
+      # TODO make a function and use it also for X[ir, k2 + j] but it is a bit of a challenge
+      # because conditions for max and min must be an input for the function
       if (!plugin.marginal[j]) {
         for (r in 1:Rlevels[j]) {
-          ir <- (1:n)[R[, j] == r & !is.na(R[, j])]
+          # condition_on_rows_bv <- (R[, j]==r & not_na_in_r_j_bv)
+          # if (any(condition_on_rows_bv)) {  # FG actually I think this will always be true somehow because of Rlevels
+            # ir <- (1:n)[condition_on_rows_bv]
+          ir <- (1:n)[R[, j] == r & not_na_in_r_j_bv]
+        # ir <- (1:n)[R[, j] == r & !is.na(R[, j])]
+          # selected_col = j, row_value_lower = r - 1, row_value_upper = r + 1,
           lb <- suppressWarnings(max(X[R[, j] == r - 1, j], na.rm = TRUE))
           ub <- suppressWarnings(min(X[R[, j] == r + 1, j], na.rm = TRUE))
           set.seed(random_seed_n)  # FG set random generator seed for runif
@@ -170,16 +181,22 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
             sd = sdj
           )
           random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+          # }
         }
       }
-      ir <- (1:n)[is.na(R[, j])]
-      set.seed(random_seed_n)  # FG set random generator seed
-      X[ir, j] <- rnorm(n = length(ir), mean = muj[ir], sd = sdj)
-      random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
-      # }else{
-      #   ir <- (1:n)[is.na(R[, j])]
-      #   X[ir, j] = rnorm(length(ir))
-      # }
+      na_in_r_j_bv <- is.na(R[, j])  # FG - actually should be !not_na_in_r_j_bv because R should be as before
+      # ir <- (1:n)[is.na(R[, j])]
+      if (any(na_in_r_j_bv)) {  # FG run only if needed
+        ir <- (1:n)[na_in_r_j_bv]
+      # ir <- (1:n)[is.na(R[, j])]
+        set.seed(random_seed_n)  # FG set random generator seed
+        X[ir, j] <- rnorm(n = length(ir), mean = muj[ir], sd = sdj)
+        random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+        # }else{
+        #   ir <- (1:n)[is.na(R[, j])]
+        #   X[ir, j] = rnorm(length(ir))
+        # }
+      }
     }
     Z1 = eta1 = X[, index.1]  # FG to be changed
     
@@ -206,13 +223,18 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     if (k2 > 0 ) {
       for (j in index.tmp) {
         q <- which(Lambda[j, ] != 0)  # FG j is used as position of Lambda row
-        
         a <- S[k2+j, q] / S[q, q]  # FG j is used as position of S column
         sdj <- sqrt( S[k2+j, k2+j] - a * S[q, k2+j] )
         muj <- X[, q] * a
+        not_na_in_r_j_bv <- !is.na(R[, j]) # FG could actually check is not all TRUE befpre computing stuff above but it should never happen
         if (!plugin.marginal[j]) {
-          for(r in sort(unique(R[, j]))){
-            ir <- (1:n)[R[, j]==r & !is.na(R[, j])]
+          for (r in sort(unique(R[, j]))) {
+            # ir <- (1:n)[R[, j]==r & !is.na(R[, j])]
+            # condition_on_rows_bv <- (R[, j]==r & not_na_in_r_j_bv)
+            # if (any(condition_on_rows_bv)) {  # FG actually I think this will always be true somehow because of Rlevels
+              # ir <- (1:n)[condition_on_rows_bv]
+            ir <- (1:n)[R[, j]==r & not_na_in_r_j_bv]
+            # selected_col = j, row_value_lower = r - 1, row_value_upper = r + 1,
             lb <- suppressWarnings(max(X[R[, j] < r, k2 + j], na.rm = TRUE))  # FG j is used as position of X column
             ub <- suppressWarnings(min(X[R[, j] > r, k2 + j], na.rm = TRUE))  # FG j+k2 , T
             set.seed(random_seed_n)  # FG set random generator seed
@@ -223,12 +245,17 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
               sd = sdj
             )  # FG j+k2
             random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+            # }
           }
         }
-        ir <- (1:n)[is.na(R[, j])]
-        set.seed(random_seed_n)  # FG set random generator seed
-        X[ir, k2 + j] <- rnorm(length(ir), muj[ir], sdj)  # FG j+k2
-        random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+        na_in_r_j_bv <- is.na(R[, j])  # FG - actually should be !not_na_in_r_j_bv because R should be as before
+        # ir <- (1:n)[is.na(R[, j])]
+        if (any(na_in_r_j_bv)) {  # FG run only if needed
+          ir <- (1:n)[na_in_r_j_bv]
+          set.seed(random_seed_n)  # FG set random generator seed
+          X[ir, k2 + j] <- rnorm(length(ir), muj[ir], sdj)  # FG j+k2
+          random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+        }
       }
       Z2 <- X[, (k+1):(k2+p)]
       
@@ -238,7 +265,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
       ## sample eta2
       ind.tmp <- (1:(p+k2))[-index.2]
       A <- S[index.2, ind.tmp] %*% solve(S[ind.tmp, ind.tmp], tol = tol)  # FG
-      sdj <-  S[index.2, index.2] - A %*% S[ind.tmp, index.2]
+      sdj <- S[index.2, index.2] - A %*% S[ind.tmp, index.2]
       # message("sdj size ", dim(sdj))  # FG
       # if (!isSymmetric(sdj)) {
       #   # FG - measure a symmetry of sdj
@@ -284,7 +311,10 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     
     ## sample S
     set.seed(random_seed_n)  # FG set random generator seed
-    P <- rgwish(n = 1, adj.g = G, b = n+n0, D = S0 * n0 + crossprod(X))[, , 1]
+    stopifnot(all(is.finite(G)))
+    stopifnot(all(is.finite(crossprod(X))))
+    stopifnot(all(is.finite(S0)))
+    P <- rgwish(n = 1, adj.g = G, b = n + n0, D = S0 * n0 + crossprod(X))[, , 1]
     random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
     S <- solve(P, tol = tol)  # FG
     S <- cov2cor(S)  # FG transform it to correlation matrix
@@ -299,16 +329,31 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
       LPC <- c(LPC, lpc)
       C.psamp[, , ns/odens] <- C #cor(X)#
       if (impute) {  # imputing missing values of Y
+        # FG missing values of Y are imputed each time
+        #
         Y.imp.s <- Y
         for (j in 1:p) {
           # message("Impute ", j, "th column")
           # FG WARNING j is used as an index of both Y and Z columns, but this should be fine
-          Y.imp.s[is.na(Y[, j]), j] <- quantile(
-            Y[, j], 
-            pnorm(q = Z[is.na(Y[, j]), j], mean = 0, sd = sd(Z[, j])), 
-            na.rm = TRUE, 
-            type = 1
-          )
+          # FG split up code and execute only when needed
+          tmp_isna_Y_bv <- is.na(Y[, j])
+          if (any(tmp_isna_Y_bv)) {
+            tmp_distro <- pnorm(q = Z[tmp_isna_Y_bv, j], mean = 0, sd = sd(Z[, j]))
+            Y.imp.s[tmp_isna_Y_bv, j] <- quantile(
+              x = Y[, j],
+              probs = tmp_distro,
+              na.rm = TRUE,
+              names = TRUE,  # FG actually default
+              type = 1
+            )
+          }
+          # FG Original version
+          # Y.imp.s[is.na(Y[, j]), j] <- quantile(
+          #   Y[, j],
+          #   pnorm(q = Z[is.na(Y[, j]), j], mean = 0, sd = sd(Z[, j])),
+          #   na.rm = TRUE,
+          #   type = 1
+          # )
         }
         Y.imp[, , ns/odens] <- Y.imp.s
         # print(Y.imp.s)

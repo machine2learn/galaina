@@ -21,7 +21,8 @@ class Session:
         return self.file_pointer.read()
 
     def open_log(self):
-        os.remove(self.log_path)
+        if os.path.exists(self.log_path):
+            os.remove(self.log_path)
         file = open(self.log_path, 'a')
         file.close()
         self.file_pointer = open(self.log_path)

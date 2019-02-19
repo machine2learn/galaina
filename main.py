@@ -106,6 +106,7 @@ def run():
 @app.route("/download_pdf")
 def download_pdf():
     pdf_path = sess.get_writer().get_output_path_fig()
+    # FG better use os.path.basename
     filename = pdf_path.split('/')[-1]
     return send_file(pdf_path,
                      mimetype='text/csv',
@@ -116,7 +117,9 @@ def download_pdf():
 @app.route("/show_pdf")
 def show_pdf():
     pdf_path = sess.get_writer().get_output_path_fig()
+    # FG better use os.path.basename
     filename = pdf_path.split('/')[-1]
+    # FG better use os.path.dirname
     directory = '/'.join(pdf_path.split('/')[:-1])
     return send_from_directory(directory=directory,
                                mimetype='application/pdf',
