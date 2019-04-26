@@ -102,7 +102,6 @@ def run():
     return render_template('run.html', page=2)
 
 
-
 @app.route("/download_pdf")
 def download_pdf():
     pdf_path = sess.get_writer().get_output_path_fig()

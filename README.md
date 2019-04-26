@@ -5,45 +5,81 @@
 Within the course of the EU project Aggressotype, Machine2Learn BV developed a platform called Galaina to extract causal relationships from biological and medical databases that are in tabular format. Using the causal relationships from Galaina, we show that it is possible to derive subtypes, i.e., meaningful grouping of variables (here also called features) present in those databases. Galaina is a platform to read data, find causal associations, and generate a diagram that shows the causal relationships between features and subtypes. 
 
 ## Installation
+
+### Python and R Path Settings
+This part is common to all the operating systems.
+
+#### Python
+
+We assume that Python 3 is the default python interpreter. By running from the terminal the following command, all the required packages will be installed:
+```bash
+pip install -r requirements.txt
+```
+
+#### Local setup
+The path to the `Rscript` executable is hard-coded in line 133 of file `config/config_writer.py`:
+```python
+            self.add_item('r_front_end', 'path_r_binary_command', '/usr/local/bin/Rscript')
+```
+Please replace the path to the `Rscript` file (which is the last string) according to your `R` installation.
+
 ### Linux (Ubuntu)
 
 #### Terminal
 Install v8 and some R packages
 
 ```bash
-sudo apt install libv8-dev 
+sudo apt install libv8-dev
 sudo apt install r-bioc-rbgl r-cran-devtools r-cran-dplyr r-cran-shiny r-cran-ggplot2 r-cran-tidyr r-cran-caret r-cran-nnet r-cran-mvtnorm r-bioc-graph r-cran-gridextra r-cran-psych
 ```
 
 #### R console
 
 ```r
-install.packages(c("daggity", "infotheo", "sbgcop"))
-
+install.packages(c("dagitty", "infotheo", "sbgcop"))
 library(devtools)  # to use install_github
-install_github(“cran/BDgraph@2.44”)  # Install version 2.44 of BDgraph
-
+install_github("cran/BDgraph@2.44")  # Install version 2.44 of BDgraph
 source("http://bioconductor.org/biocLite.R") 
 biocLite("Rgraphviz")  # for visualizing causal discovery results (a graph) 
+install.packages(c("latex2exp", "polycor", "pcalg", "gRain", "bnlearn", "ConfigParser", "stringi", "ggplotify"))
+```
 
-install.packages("latex2exp")  # for plot_consistency.R
-install.packages("polycor")
-install.packages("pcalg")
-install.packages("gRain")
-install.packages("bnlearn")
-install.packages("ConfigParser")
-install.packages("stringi")
-install.packages("ggplotify")
+
+### MacOS 
+
+#### Terminal
+Install v8 via Homebrew
+```bash
+brew install v8@3.15
+```
+
+#### R console
+
+```r
+source("http://bioconductor.org/biocLite.R") 
+biocLite("RBGL")
+install.packages(c("devtools", "dplyr", "shiny", "ggplot2", "tidyr", "caret", "nnet"), dependencies=TRUE)
+install.packages(c("mvtnorm"))
+install.packages(c("dagitty", "infotheo", "sbgcop"))
+library(devtools)  # to use install_github
+install_github("cran/BDgraph@2.44")  # Install version 2.44 of BDgraph
+source("http://bioconductor.org/biocLite.R") 
+biocLite("Rgraphviz")  # for visualizing causal discovery results (a graph) 
 ```
 
 ## Usage
 
 ### Activation
-In a terminal, execute the folloeing command:
+
+1. In a terminal, execute the following command (Python 3 is the assumed python interpreter):
 ```python
 python main.py
 ```
-Now the internal web-server is active and it can be used by a web browser (preferably Chrome or Firefox). The default URL is `http://127.0.0.1:5000/`.
+2. Now the internal web-server is active and it can be accessed by a web browser (preferably Chrome or Firefox). The default URL is `http://127.0.0.1:5000/`.
+3. Sign in with the following credentials:
+   * Username: `test`
+   * Passowrwd: `test12345`
+4. Upload the data and factor model files, edit the configurations accordingly, and run.
 
 ### File formats
 #### Data
@@ -92,8 +128,8 @@ The factor model file must satisfy one of the following formats:
     |...| ... |
 
 
-
 ## Acknowledgement and Disclaimer 
+
 This project has received funding from the European Union's Seventh Framework Programme for research, technological development and demonstration under grant agreement no 602805.
 The research leading to these results has received funding from the European Community's Seventh Framework Programme (FP7/2007-2013) under Grant Agreement no 278948.
 This project is co-funded by the Ambient Assisted Living (AAL) Joint programme, by the german BMBF, the French ANR, the Austrian BMVIT.
