@@ -9,8 +9,8 @@ library(pcalg)  # depends on bioconductor
 library(bnlearn)
 
 # source('/Users/fabio/projects/aggressotype/external_code/CopulaFactorModel/R/my_inferCopulaFactorModel.R')
-source('/Users/fabio/projects/aggressotype/code/software/software_demo/R_code/my_inferCopulaFactorModel.R')
-# source('my_inferCopulaFactorModel.R')  # TODO test it 
+# source('/Users/fabio/projects/aggressotype/code/software/software_demo/R_code/my_inferCopulaFactorModel.R')
+source('my_inferCopulaFactorModel.R')  # TODO test it 
 
 #### 1. Load input ####
 # Load data_matrix, factor_loading_matrix
