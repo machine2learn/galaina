@@ -98,34 +98,37 @@ The factor model file must satisfy one of the following formats:
     First must contain the string `Variable`
 
     Example:
-    | *Variable* | Factor_01 | Factor_02 | Factor_02 | ... |
-    |---|---|---|---|---|
-    |Var_01    |0.5 |0 | 0 | ...|
-    |Var_02    |0.5 |0 | 0 | ...|
-    |Var_03    |0 |0 | 0.25 | ...|
+
+    | *Variable* | Factor01 | Factor02 | Factor02 | ... |
+    | -------- | --------- | --------- | --------- | --- |
+    | Var01   | 0.5       | 0         | 0         | ... |
+    | Var02   | 0.5       | 0         | 0         | ... |
+    | Var03   | 0         | 0         | 0.25      | ... |
 
 1. Factor Table
     CSV file with 3 columns listing the loading for each variable/factor combination. 
     Header is fixed and must containg the column names `Variable`, `Factor`, `Loading`.
 
     Example:
+	
     | *Variable* | *Factor* | *Loading* |
-    |---|---|---|
-    |Var_01    | Factor_01 | 0.5 |
-    |Var_02    | Factor_01 | 0.5 |
-    |Var_03    | Factor_02 | 0.25 |
-    |...| ... |...|
+    | --- | --- | --- |
+    | Var01    | Factor01 | 0.5 |
+    | Var02    | Factor01 | 0.5 |
+    | Var03    | Factor02 | 0.25 |
+    | ... | ... | ... |
 
 1. Factor Variable List
     CSV file with 2 columns listing for each factor the associated linear combinations of variables.
     Header is fixed and must containg the column names `Variable`, `Factor`, `Loading`.
 
     Example:
+
     | *Factor*| *Variable_list* |
-    |---|---|---|
-    | Factor_01 | Var_01 + Var_02 |
-    | Factor_02 | Var_03  |
-    |...| ... |
+    | --- | --- |
+    | Factor01 | Var01 + Var02 |
+    | Factor02 | Var03 |
+    | ... | ... |
 
 
 ## Acknowledgement and Disclaimer 
