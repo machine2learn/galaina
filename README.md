@@ -107,7 +107,7 @@ The factor model file must satisfy one of the following formats:
 
 1. Factor Table
     CSV file with 3 columns listing the loading for each variable/factor combination. 
-    Header is fixed and must containg the column names `Variable`, `Factor`, `Loading`.
+    Header is fixed and must containing the column names `Variable`, `Factor`, `Loading`.
 
     Example:
 	
@@ -120,7 +120,7 @@ The factor model file must satisfy one of the following formats:
 
 1. Factor Variable List
     CSV file with 2 columns listing for each factor the associated linear combinations of variables.
-    Header is fixed and must containg the column names `Variable`, `Factor`, `Loading`.
+    Header is fixed and must containing the column names `Variable`, `Factor`, `Loading`.
 
     Example:
 
