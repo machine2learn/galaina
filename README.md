@@ -50,8 +50,9 @@ install.packages(c("latex2exp", "polycor", "pcalg", "gRain", "bnlearn", "ConfigP
 #### Terminal
 Install v8 via Homebrew
 ```bash
-brew install v8@3.15
+brew install v8
 ```
+<!-- brew install v8@3.15 -->
 
 #### R console
 
@@ -65,6 +66,7 @@ library(devtools)  # to use install_github
 install_github("cran/BDgraph@2.44")  # Install version 2.44 of BDgraph
 source("http://bioconductor.org/biocLite.R") 
 biocLite("Rgraphviz")  # for visualizing causal discovery results (a graph) 
+install.packages(c("latex2exp", "polycor", "pcalg", "gRain", "bnlearn", "ConfigParser", "stringi", "ggplotify"))
 ```
 
 ## Usage
@@ -83,7 +85,55 @@ python main.py
 
 ### File formats
 #### Data
-Data must be privided as a CSV file
+Galaina accepts as input one or multiple datasets.
+
+##### Single dataset
+Each dataset must be provided as CSV files where
+* The first column contains the instances (i.e. rows) identifiers
+* The first rows contains a header with the variable names (i.e. the column names)
+
+Example:
+
+We refer to this example dataset as **Dataset_01**
+
+| *Identifier* | *Variable1_01* | *Variable1_02* | *Variable1_02* | ... |
+| -------- | --------- | --------- | --------- | --- |
+| id01   | 45       | 0         | 1        | ... |
+| id02   | 0.5       | 42         | 0         | ... |
+| id03   | -8         | 0         | 0.25      | ... |
+| id04   | 48         | 10         | 5.25      | ... |
+
+##### Multiple datasets
+If  multiple datasets are given as input, they will be inner-joined with respect to the first column. 
+This means that Galaina will create internally a new database made by only the instances present in all the input datasets and with all the columns of the input datasets.
+
+Example:
+
+Together with Dataset_01, we give as input two more datasets:
+
+**Dataset_02**
+| *Identifier* | *Variable2_01* | *Variable2_02* | *Variable2_03* | ... |
+| -------- | --------- | --------- | --------- | --- |
+| id02   | 4.5       | 442         | 4         | ... |
+| id03   | 48         | 4         | 4.25      | ... |
+| id04   | 448         | 40         | 9.25      | ... |
+
+**Dataset_03**
+
+| *Identifier* | *Variable3_01* | *Variable3_02* | *Variable3_02* | ... |
+| -------- | --------- | --------- | --------- | --- |
+| id01   | 75       | 3         | 3        | ... |
+| id02   | 3.5       | 32         | 0.3         | ... |
+| id04   | 38         | 30         | 3.25      | ... |
+| id05   | 58         | 35         | 5.25      | ... |
+
+Then Galaina will process the resulting dataset, made only by `id02` and `id04`:
+
+| *Identifier* | *Variable1_01* | *Variable1_02* | *Variable1_02* | *Variable2_01* | *Variable2_02* | *Variable2_03* | *Variable3_01* | *Variable3_02* | *Variable3_03* | ... |
+| -------- | --------- | --------- | --------- |   -------- | --------- | --------- | --------- | --- | -------- | --------- | --------- | --------- | 
+| id02   | 0.5       | 42         | 0         |  4.5       | 442         | 4         | 3.5       | 32         | 0.3         | ... |
+| id04   | 48         | 10         | 5.25      |  448         | 40         | 9.25    | 38         | 30         | 3.25      | ... |
+
 
 #### Factor models
 We assume that each variable has one and only one factor with non-zero loading. 
@@ -120,7 +170,7 @@ The factor model file must satisfy one of the following formats:
 
 1. Factor Variable List
     CSV file with 2 columns listing for each factor the associated linear combinations of variables.
-    Header is fixed and must containing the column names `Variable`, `Factor`, `Loading`.
+    Header is fixed and must containing the column names `Factor` and `Variable_list` (or `Variable_set`).
 
     Example:
 
