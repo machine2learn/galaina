@@ -122,6 +122,7 @@ class FactorInfoFactory:
         column_tuple2detected_format_str = {
             ('Factor', 'Loading'): 'factor_model_df',
             ('Variable_set',): 'factor_var_set_df',
+            ('Variable_list',): 'factor_var_set_df',
         }
         tmp_tuple = tuple(self.factor_df.columns.tolist())
         # if no compatible key is in the dictionary, return factor_loading_df
