@@ -112,11 +112,12 @@ Example:
 Together with Dataset_01, we give as input two more datasets:
 
 **Dataset_02**
+
 | *Identifier* | *Variable2_01* | *Variable2_02* | *Variable2_03* | ... |
 | -------- | --------- | --------- | --------- | --- |
-| id02   | 4.5       | 442         | 4         | ... |
-| id03   | 48         | 4         | 4.25      | ... |
-| id04   | 448         | 40         | 9.25      | ... |
+| id02     | 4.5       | 442       | 4         | ... |
+| id03     | 48        | 4         | 4.25      | ... |
+| id04     | 448       | 40        | 9.25      | ... |
 
 **Dataset_03**
 
