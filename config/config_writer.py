@@ -28,7 +28,8 @@ class ConfigWriter:
         result = []
         for k, value in form.items():
             print(k, value)
-            if 'csrf_token' not in k:
+            # if 'csrf_token' not in k:
+            if 'csrf_token' not in k and not k.endswith('_check'):
                 section, key = k.split('-', 1)
                 section = section.lower()
                 result.append((section, key, value))
