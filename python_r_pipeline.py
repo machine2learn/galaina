@@ -347,7 +347,7 @@ class InfoToDF:
             "Some factors are also variables"
         # TODO TEST maybe check that all proper factor have at least 2 associated variables
         assert (self.type2factor['factor_model_df'].factor_df.loc[ structured_variable_index, 'Factor'].value_counts() > 1).all(), \
-            "Some factors of structured variables have just one structured variable associated"
+            "Some factors of structured variables have just one structured variable associated. Please check that factors with just one structured variable associated have the same name of the variable."
 
 
 class ListInfoToDF:
