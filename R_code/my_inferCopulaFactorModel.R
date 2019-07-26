@@ -2,6 +2,9 @@ update_random_seed <- function(random_seed, parameter = 10) {
   random_seed + parameter
 }
 
+version_at_least <- function(pkg, than) {
+  as.logical((compareVersion(as.character(packageVersion(pkg)), than) >= 0))
+}
 # custom_sampling_uniform(ir, lb, ub, muj, sdj) {
 #   runif(n = length(ir), min = pnorm(q = lb, mean = muj[ir], sd = sdj), max = pnorm(q = ub, mean = muj[ir], sd = sdj))
 # }
@@ -37,7 +40,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   #   
   
   
-  # It seems that it stores in C.psamp only some of the Gibbs sampled Correlation matrices. 
+  # I stores in C.psamp only some of the Gibbs sampled Correlation matrices. 
   # However, in this way to throw-away the burn-in samples from the C.psamp given as output by the function we must throw away the first floor((throw_away_n + 1)/odens_n)
   require(BDgraph)
   library(mvtnorm)
@@ -67,8 +70,9 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   # FG my idea stopifnot(index.1 == 1:k1)
   # index of factors with multiple indicators
   index.2 <- which(colSums(Lambda) > 1)
+  rel_sign_orig_lambda <- sign(original_lambda_m)[, index.2]  # FG used later for adjusting factor sign
   # No. of factors with multiple indicators
-  k2 <- length(index.2)  # TODO actually maybe is assuming that the factors with multiple indicators are come after the oens with single indicator. THey are in X by construction
+  k2 <- length(index.2)  # TODO actually maybe is assuming that the factors with multiple indicators come after the ones with single indicator. They are in X by construction
   ## get the pior graph G
   G1 <- matrix(1, k, k) - diag(k)
   if (k1 == 0) {
@@ -121,15 +125,15 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   X <- cbind(eta, Z2)
   # FG  X <- cbind(eta1, eta2, Z2)
   # X = matrix n x (k1 + k2 + (p-k1)) = n x p+k2
-  # eta1 = matrix n x k1 with pseudo-data of factors with single indicators
+  # eta1 = matrix n x k1 with pseudo-data of factors with single indicators (so 1-2-1 with variable)
   # eta2 = matrix n x k2 with pseudo-data of factors with multiple indicators
   # Z2  = matrix n x (p - k1) with transformed data of variables whose factors have with multiple indicators
   # If k1 = 0 there is no eta1
   # X = matrix n x (0 + k2 + p) = n x p+k2
   # if k1 > 0
-  S <- cov(X)  # FG initialize the covariance matrix
+  S <- cov(X)  # Initialize the covariance matrix
   if (n < p) {
-    S <- S + S0  # otherwise it would be singular
+    S <- S + S0  # New wrt to Cui code: add scale matrix to avoid S be singular FG
   }  # FG
   
   ####
@@ -150,6 +154,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
 
   # fileConn <- file("output.txt")
   #### start of Gibbs sampling scheme
+  # This loop could be put in a function of index.1, k, X, S, R, Y, Y.pmean, Y.imp,
   for (ns in 1:nsamp) {
     # message("Sampling Iteration: ", ns)  # FG
     ## sample Z1 (=eta1)
@@ -157,10 +162,10 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     for (j in index.1) {
       # if (!(j %in% ind.cat)) {
       ind.tmp <- (1:k)[-j]  # FG k =  k1 + k2 = nr factors
-      Sjc <- S[j, ind.tmp] %*% solve(S[ind.tmp, ind.tmp], tol = tol)  # FG
+      Sjc <- S[j, ind.tmp] %*% solve(S[ind.tmp, ind.tmp], tol = tol)  # New wrt to Cui code: allow tollerance
       sdj <- sqrt(S[j, j] - Sjc %*% S[ind.tmp, j])
       muj <- X[, ind.tmp] %*% t(Sjc)
-      not_na_in_r_j_bv <- !is.na(R[, j]) # FG could actually check is not all TRUE before computing stuff above but it should never happen
+      not_na_in_r_j_bv <- !is.na(R[, j]) # FG simply avoid computing it at every iteration - could actually check is not all TRUE before computing stuff above but it should never happen
       # TODO make a function and use it also for X[ir, k2 + j] but it is a bit of a challenge
       # because conditions for max and min must be an input for the function
       if (!plugin.marginal[j]) {
@@ -184,7 +189,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
           # }
         }
       }
-      na_in_r_j_bv <- is.na(R[, j])  # FG - actually should be !not_na_in_r_j_bv because R should be as before
+      na_in_r_j_bv <- is.na(R[, j])  # FG simply avoid computing it at every iteration - actually should be !not_na_in_r_j_bv because R should be as before
       # ir <- (1:n)[is.na(R[, j])]
       if (any(na_in_r_j_bv)) {  # FG run only if needed
         ir <- (1:n)[na_in_r_j_bv]
@@ -201,7 +206,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     Z1 = eta1 = X[, index.1]  # FG to be changed
     
     ## sample Z2
-    # FG these are the factors whose varaibles have multiple indicators 
+    # FG these are the factors whose variables have multiple indicators
     # FG the columns of Z corresponding to Z2 are the last p - k1
     # FG  if (k1 == 0) index.tmp <- sample(1:p) else index.tmp <- sample((1:p)[-index.1])
     # FG index.tmp <- index in X of variables whose factors have multiple indicators
@@ -289,34 +294,87 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
       eta2 <- X[, index.2]
       
       eta <- cbind(eta1, eta2)
-      
-      ## identification condition
-      # TODO replace it with my solution
-      # sign( sum(lapply( Lambda[, j] * ,sign)
-      # cov(X[, j], X[, k2 + which(Lambda[, j] != 0)]))
-      # FG adjust columns of X corresponding to eta2, looks to me that requires single-identificator factors to come before the others in Lambda columns
-      # FG otherwise, change which(Lambda[, j] != 0) in something like
-      # for (iPos in (k1+1:k1+k2)) {
-      
-      # } 
-      # TODO double check this j
-      # FG WARNING even here j is both an index of Lambda and of X
+
+      ### identification condition
+      ## Original
       for (j in index.2) {
         X[, j] <- X[, j] * sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
       }
+      # ## New - written on  20190703
+      # # #  difference wrt Cui code: now force copula factors to have same signs of input factors
+      # # # sign( sum(lapply( Lambda[, j] * ,sign)
+      # # # cov(X[, j], X[, k2 + which(Lambda[, j] != 0)]))
+      # #
+      # # # So X[, j] is my \eta_j as long as j in index.2
+      # # # Lambda[i, j] = \gamma_{i, j} is the original factor loadimg for var i nd input factor j
+      # # # Not sure if it should be extended also to index.1 that is index of both singleton factors and signelton var
+      # # # sign_cX <- sign(cov(X))  # I am also computing cov btw index.2 stuff that I won't need
+      # # # rel_sign_cX <- sign_cX[index.2, -index.2]
+      # # #
+      # rel_sign_cX <- sign(cov(X))[index.2, -index.2]  # I just need Cov btw the multi-variable factors and the variables
+      # # # we want sign(diag(sign_cX %*% rel_sign_orig_Lambda))
+      # # # because we multiply row j of sign_cX with column j of rel_sign_orig_Lambda
+      # # # But this is: for each index
+      # adjust_v <- sign(colSums(t(rel_sign_cX) * rel_sign_orig_lambda))
+      # # # Could this have some zero elements? In theory if the number of variables for a factor is even, it could be
+      # # # Then it is better to edit adjust_v s.t. if it's 0 it is replaced by the original copula sign( cov( X[, j],  X[, k2 + which(Lambda[, j] != 0)[1]] ) )
+      # zero_pos_v = which(adjust_v == 0)
+      # if (length(zero_pos_v) > 0) { # TODO raise something
+      #   tmp_log_str_v <- c("There are ", length(zero_pos_v), "factors with sign_adjustment_factor = 0. Force first non-zero factor loading of each multivar factor to be positive.", "\n")
+      #   cat(tmp_log_str_v)
+      #   write(paste(tmp_log_str_v, collapse = " "), file=fileConn, append=TRUE)
+      #   for (jj in zero_pos_v) {
+      #     adjust_v[jj] <- sign(
+      #       cov(X[, index.2[jj]], X[, k2 + which(Lambda[, index.2[jj]] != 0)[1]])
+      #     )
+      #   }
+      # }
+      # X[, index.2] <- t(t(X[, index.2]) * adjust_v)  # multiply each column X[, j] with adjust_v[j]
+      # # #
+      # # # could do some elementwise multiplication and then some rows/columns
+      # # # for (jj in 1: length(index.2){
+      # # #   X[, index.2[jj]] <- X[, index.2[jj]] * sign( dot(rel_sign_orig_Lambda[, index.2[jj]],  sign_cX[jj, ]))
+      # # # }
+
+      # 2019
+      #
+      # FG adjust columns of X corresponding to eta2, looks to me that requires single-identificator factors to come before the others in Lambda columns
+      # FG otherwise, change which(Lambda[, j] != 0) in something like
+      # for (iPos in (k1+1:k1+k2)) {
+      # }
+      #
+      # TODO double check this j
+      # FG WARNING even here j is both an index of Lambda and of X
+      # This exploits the fact that the indices j corresponds to those central k2 and hence higher than k1
+      # FG  X <- cbind(eta1, eta2, Z2)
+      # X = matrix n x (k1 + k2 + (p-k1)) = n x p+k2
+      # eta1 = matrix n x k1 with pseudo-data of factors with single indicators (so 1-2-1 with variable)
+      # eta2 = matrix n x k2 with pseudo-data of factors with multiple indicators
+      # Z2  = matrix n x (p - k1) with transformed data of variables whose factors have with multiple indicators
+      # So the Z of Cui_CopulaFactorModel_2018_latest_version.pdf Algorithm 1 is X[, -index.2] = X[, cat(1:k1, k2+k1+1:p+k2)]
+      # if k1=0 => X = matrix n x (0 + k2 + p) = n x p+k2
+      #
     }
     
-    ## relocate the mean to zero
+    # Relocate the mean to zero
     X <- t( (t(X) - apply(X, 2, mean)) )
     
-    ## sample S
+    # Sample S
     set.seed(random_seed_n)  # FG set random generator seed
     stopifnot(all(is.finite(G)))
     stopifnot(all(is.finite(crossprod(X))))
     stopifnot(all(is.finite(S0)))
-    P <- rgwish(n = 1, adj.g = G, b = n + n0, D = S0 * n0 + crossprod(X))[, , 1]
+
+    if (version_at_least("BDgraph", "2.56")) {
+      P <- rgwish(n = 1, adj = G, b = n + n0, D = S0 * n0 + crossprod(X))
+    } else if (version_at_least("BDgraph", "2.46")) {
+      P <- rgwish(n = 1, adj.g = G, b = n + n0, D = S0 * n0 + crossprod(X))
+    } else {
+      P <- rgwish(n = 1, adj.g = G, b = n + n0, D = S0 * n0 + crossprod(X))[, , 1]
+    }
+
     random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
-    S <- solve(P, tol = tol)  # FG
+    S <- solve(P, tol = tol)  # FG tollerance adde
     S <- cov2cor(S)  # FG transform it to correlation matrix
     
     if (ns%%odens == 0) {
@@ -369,8 +427,8 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     }
   }
   # close(fileConn)
-  #
-  Z.pmean <- apply(Z.imp, c(1,2), mean)
+  
+  Z.pmean <- apply(Z.imp, c(1,2), mean)  # Actually we don't use this anymore
   
   # # 
   #G.ps <- list(Sigma.psamp = C.psamp, Y.pmean = Y.pmean, Y.impute = Y.imp, Z.pmean = Z.pmean, Z.impute = Z.imp, LPC = LPC)
