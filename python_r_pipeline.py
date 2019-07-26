@@ -346,8 +346,7 @@ class InfoToDF:
         assert not structured_variable_index.isin(self.type2factor['factor_model_df'].factor_df['Factor']).any(), \
             "Some factors are also variables"
         # TODO TEST maybe check that all proper factor have at least 2 associated variables
-        assert (self.type2factor['factor_model_df'].factor_df.loc[
-                    structured_variable_index, 'Factor'].value_counts() > 1).all(), \
+        assert (self.type2factor['factor_model_df'].factor_df.loc[ structured_variable_index, 'Factor'].value_counts() > 1).all(), \
             "Some factors of structured variables have just one structured variable associated"
 
 
@@ -401,7 +400,7 @@ def save_to_csv_for_r(input_df, path_to_data_file, config):
     :param config:
     :return:
     """
-    input_df.to_csv(path_to_data_file, sep=config.get_csv_separator(), index_label=False)
+    input_df.to_csv(path_to_data_file, sep=config.get_csv_separator(), na_rep='', index_label=False)
 
 
 def load_input_csv(path_to_data_file, config):
