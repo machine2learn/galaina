@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
 
+# This is the code called with the default config.ini
+
 print_and_append_to_log <- function(tmp_log_str_v, fileConn) {
   cat(tmp_log_str_v)
   write(paste(tmp_log_str_v, collapse = " "), file=fileConn, append=TRUE)
@@ -196,6 +198,9 @@ pc_parameters_ls <- list(
 )
 
 # TODO maybe in the future we require to have at least causal_discovery_algorithm_run_n algorithm, so we replace this for with a while (iRun_n <=  causal_discovery_algorithm_run_n)
+# This loop outputs: run2suffstat_ls, run2pcalgo_ls, run2pcalgo_bad_ls
+# We could turn the loop core into a function taking as input run2suffstat_ls, run2pcalgo_ls, run2pcalgo_bad_ls AND other stuff adn outputing I think only those 3
+# original_bootstrap_n, fileConn, data_df
 for (iRun_n in 1:causal_discovery_algorithm_run_n) {
   ## 2.1 Bootstrap
   if (original_bootstrap_n < 1) {
@@ -235,7 +240,7 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
   )  # , tol = 1e-22)
  
   # cat(dim(tmp_cop_fac_obj$Sigma.psamp), "\n")
-  # extract samples of the correlation matrix over latent variables, ignoring the first samples (burn-in)
+  # Extract samples of the correlation matrix over latent variables, ignoring the first samples (burn-in)
   # C_samples <- tmp_cop_fac_obj$Sigma.psamp[1:factor_n, 1:factor_n, (gibbs_burn_in_n + 1) : gibbs_sampling_n]
   if (throw_away_odens_n < 1) {
     C_samples <- tmp_cop_fac_obj$Sigma.psamp[1:factor_n, 1:factor_n, ]
@@ -408,7 +413,7 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
 }
 cat('\n')
 
-# Save stuff generated in the loop aobve
+# Save stuff generated in the loop above
 # maybe TODO adjust it when no bootstap is done
 output_path_suffstat <- config$get(option = "output_path_suffstat", fallback = "", section = "output_paths")
 if (!stri_isempty(output_path_suffstat)) {
@@ -445,6 +450,13 @@ if (original_bootstrap_n < 1) {
   path_to_bn_strength_obj <- config$get(option = "output_path_bn_strength_obj", fallback = "", section = "output_paths")
   if (!stri_isempty(path_to_bn_strength_obj)) {
     saveRDS(bn_strength_obj, file = path_to_bn_strength_obj)
+    # Save to CSV file
+    write.csv(
+      readRSD(path_to_bn_strength_obj), 
+      file = path_to_bn_strength_obj.replace('.rds', '.csv'), 
+      row.names=FALSE, 
+      na=""
+    )
   }
   
   avg_bn_obj <- averaged.network(strength = bn_strength_obj, nodes = factor_names)  # it automatically gets the thresold from bn_strength_obj
@@ -525,13 +537,24 @@ if (original_bootstrap_n >= 1) {
   lwd_key2data_key <- as.list(setNames(object = gsub("[~]", "|", tmp_key_v), nm = tmp_key_v ))
   for (iName in names(lwd_key2data_key)) {
     graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]] <- graph_nel@renderInfo@edges[["lwd"]][[iName]]
+    # graph_nel@renderInfo@edges[["arrowhead"]][[iName]] in theory should store the type of arrowhead
+    # should be able to use the setter edgeData(graph, from, to, attr)
+    # we need also to set the arrowtail
+    # So maybe loading graph_nel and set arrowtail and arrowhead accorging to the amat_pag will be enough
+    # this strength.plot code 
+    # https://github.com/cran/bnlearn/blob/414301e1a241148ec7bfb7e06f5eeda00ef2cd2b/R/frontend-plot.R#L34
+    # calls inside graphviz.backend that manipulates arrowtail and arrowhead
+    # https://github.com/cran/bnlearn/blob/414301e1a241148ec7bfb7e06f5eeda00ef2cd2b/R/graphviz-backend.R#L3
+    # that inside plot with Rgraphviz::renderGraph(graph.plot)
+    # maybe we just need to set arrowhead and tails and then a mod version of strength.plot calling a mod version of graphviz.backend that does not touch arrotail and arrowhead
+    #
     # cat(c(graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]], "\n"))
   }
   # TODO fix it
-  # library(Rgraphviz)
-  # toDot(graph = graph_nel, filename = 'graph_output.gv')
+  # toDot(graph = graph_nel, filename = 'graph_output.gv')  # from library(Rgraphviz)
   #
-  # TODO make it store edge weight toDotR(G = graph_nel, outDotFile = "~/Documents/figures/estonian.gv")
+  # TODO make it store edge weight toDotR(G = graph_nel, outDotFile = "~/Documents/figures/estonian.gv")  # from library(graph)
+  # https://github.com/Bioconductor/graph/blob/master/R/TODOT.R
 } else {
   # TODO - output to var, convert and save it
   plot(run2pcalgo_ls[[1]], main = first_title)  # if 
