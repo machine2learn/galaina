@@ -2,11 +2,6 @@
 
 # This is the code called with the default config.ini
 
-print_and_append_to_log <- function(tmp_log_str_v, fileConn) {
-  cat(tmp_log_str_v)
-  write(paste(tmp_log_str_v, collapse = " "), file=fileConn, append=TRUE)
-}
-
 library(utils)
 library(tools)  # to get file extension
 library(dplyr)  # actually I load it only for filter
@@ -22,7 +17,6 @@ library(bnlearn)
 library(ConfigParser)  # GPL-
 library(Rgraphviz)  # for using toDot
 # library(configr)  # alternative to package above
-
 
 # MAIN
 
@@ -60,7 +54,7 @@ path_r_infer_copula_factor_script <- config$get(option = "path_r_infer_copula_fa
 
 source(path_r_infer_copula_factor_script)
 # source('/Users/fabio/projects/aggressotype/code/software/software_demo/R_code/my_inferCopulaFactorModel.R')
-# source('my_inferCopulaFactorModel.R')  # TODO test it
+# source('my_inferCopulaFactorModel.R')
 
 #### 1. Load input ####
 # Load data_matrix, factor_loading_matrix
@@ -96,7 +90,6 @@ gibbs_burn_in_n <- as.integer(
 gibbs_first_random_seed_n <- as.integer(
   config$getfloat(option = "gibbs_first_random_seed_n", section = "copula_factor_algorithm")
 )     # 365 
-# gibbs_random_seed_update_parameter_n <- 10  # TODO see if it should be a option in INI
 gibbs_random_seed_update_parameter_n <- as.integer(
   config$getfloat(option = "gibbs_random_seed_update_parameter_n", section = "copula_factor_algorithm")
 )
@@ -106,7 +99,6 @@ original_bootstrap_n <- as.integer(
   # args[6]
 )  # in INI e.g. 500
 causal_discovery_algorithm_run_n <- max(original_bootstrap_n, 1)  # if original_bootstrap_n ==0, we know that no boostrap must be performed
-# TODO rename bootstrap_n as causal_discovery_algorithm_run_n
 
 if (original_bootstrap_n >= 1) {
   bootstrap_first_random_seed_n <- as.integer(
@@ -116,7 +108,7 @@ if (original_bootstrap_n >= 1) {
   bootstrap_random_seed_update_parameter_n <- as.integer(
     config$getfloat(option = "bootstrap_random_seed_update_parameter_n", section = "edge_weight_algorithm")
     # args[6]
-  )  # 10  # TODO see if it should be a option in INI
+  )
   bootstrap_random_seed_n <- bootstrap_first_random_seed_n
 }
 input_path_directed_edges_blacklist <- config$get(option = "input_path_directed_edges_blacklist", fallback = "", section = "input_paths_and_related_parameters")   # args[8]
@@ -211,7 +203,7 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
     # cat("No bootstrap performed \n")
     # cat("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n")
     #
-    set.seed(bootstrap_random_seed_n)
+    set.seed(bootstrap_random_seed_n) # for testing set seed to
     # if (perform_bootstrap_b) {
     #     iteration_tag_str <- "bootstrap iteration"
     #     iteration_rows_id <- sample(nrow(data_df), replace = TRUE)
@@ -221,24 +213,44 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
     #     iteration_rows_id <- seq(nrow(data_df))
     #     # tmp_run_data_df <- data_df  # no bootstrap
     # }
+    # tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
     print_and_append_to_log(c("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
-    tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
+    print_and_append_to_log(c("Random seed bootstrap sample:", bootstrap_random_seed_n, "\n"), fileConn)
+    iteration_rows_id <- sample(nrow(data_df), replace = TRUE)
     bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
-    # TODO use instead
-    # tmp_run_data_df <- data_df[iteration_rows_id, ]
+    tmp_run_data_df <- data_df[iteration_rows_id, ]
+    # write.csv(
+    #   tmp_run_data_df,
+    #   file = '/Users/fabio/rpq_230.csv',
+    #   row.names=FALSE,
+    #   na=""
+    # )
+
   }
- 
   ## 2.2 Perform inference
-  tmp_cop_fac_obj <- my_inferCopulaFactorModel(
-    Y = data.matrix(tmp_run_data_df),
-    Lambda = data.matrix(factor_loading_df),
-    nsamp = gibbs_sampling_n,
-    odens = odens_n,  # Store each Gibbs sampling output
-    first_random_seed = gibbs_first_random_seed_n,
-    random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
-    fileConn = fileConn
-  )  # , tol = 1e-22)
- 
+  repeat {
+    tmp_cop_fac_obj <- tryCatch(
+      my_inferCopulaFactorModel(
+        # Y_df = tmp_run_data_df,
+        Y = data.matrix(tmp_run_data_df),
+        Lambda = data.matrix(factor_loading_df),
+        nsamp = gibbs_sampling_n,
+        odens = odens_n,  # Store each Gibbs sampling output
+        first_random_seed = gibbs_first_random_seed_n,
+        random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
+        fileConn = fileConn
+      ),   # , tol = 1e-22)
+      error = identity
+    )
+    if (!is(tmp_cop_fac_obj, "error")) {
+      break
+    }
+    bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
+    print_and_append_to_log(c("Repeat current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
+    print_and_append_to_log(c("Random seed bootstrap sample:", bootstrap_random_seed_n, "\n"), fileConn)
+    tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
+  }
+
   # cat(dim(tmp_cop_fac_obj$Sigma.psamp), "\n")
   # Extract samples of the correlation matrix over latent variables, ignoring the first samples (burn-in)
   # C_samples <- tmp_cop_fac_obj$Sigma.psamp[1:factor_n, 1:factor_n, (gibbs_burn_in_n + 1) : gibbs_sampling_n]
@@ -429,7 +441,7 @@ if (original_bootstrap_n < 1) {
 } else {
   removed_graph_due_to_blacklist_bv <- sapply(X = run2pcalgo_ls, FUN = is.null)
   # cat("Graphs removed due to incompatibility with blacklist", sum(removed_graph_due_to_blacklist_bv), "\n")
-  print_and_append_to_log(c("Graphs removed due to incompatibility with blacklist", sum(removed_graph_due_to_blacklist_bv), "\n"), fileConn)
+  print_and_append_to_log(c("Graphs removed due to incompatibility with blacklist:", sum(removed_graph_due_to_blacklist_bv), "\n"), fileConn)
   bootstrapped_bnlearn_list <- lapply(
     X = run2pcalgo_ls[!removed_graph_due_to_blacklist_bv],  # Ignore NULL elements of the list
     # X = run2pcalgo_ls[!sapply(run2pcalgo_ls, is.null)],  # Ignore NULL elements of the list
@@ -446,21 +458,26 @@ if (original_bootstrap_n < 1) {
   )
   # cpdag	:: a boolean value. 
   
-  # path_to_bn_strength_obj = "/Users/fabio/bn_strength_obj.rds"  # TODO put in INI
   path_to_bn_strength_obj <- config$get(option = "output_path_bn_strength_obj", fallback = "", section = "output_paths")
   if (!stri_isempty(path_to_bn_strength_obj)) {
     saveRDS(bn_strength_obj, file = path_to_bn_strength_obj)
-    # Save to CSV file
+    # Save to CSV files (thresholded and not thresholded)
+    bn_strength_obj_df <- readRDS(path_to_bn_strength_obj)
     write.csv(
-      readRSD(path_to_bn_strength_obj), 
-      file = path_to_bn_strength_obj.replace('.rds', '.csv'), 
-      row.names=FALSE, 
+      bn_strength_obj_df,
+      file = sub('.rds', '.csv', path_to_bn_strength_obj),
+      row.names=FALSE,
+      na=""
+    )
+    write.csv(
+      bn_strength_obj_df[bn_strength_obj_df$strength >= attr(bn_strength_obj_df, "threshold"), ],
+      file = sub('.rds', '_thresholded.csv', path_to_bn_strength_obj),
+      row.names=FALSE,
       na=""
     )
   }
   
   avg_bn_obj <- averaged.network(strength = bn_strength_obj, nodes = factor_names)  # it automatically gets the thresold from bn_strength_obj
-  # path_to_avg_bn_obj = "/Users/fabio/avg_bn_obj.rds"  # TODO put in INI
   path_to_avg_bn_obj <- config$get(
     option = "output_path_avg_bn_obj", 
     fallback = "", section = "output_paths"
@@ -470,7 +487,7 @@ if (original_bootstrap_n < 1) {
   }
 }
   
-main_plot_title_str <- config$get(option = "core_plot_title_str", fallback = "", section = "plot_and_display")  # "Fake model"  # TODO put in INI
+main_plot_title_str <- config$get(option = "core_plot_title_str", fallback = "", section = "plot_and_display")
 # show_graph_before_bgk_application_b <- config$getboolean(option = "show_graph_before_bgk_application_b", section = "plot_and_display")  # as.logical("False")  # TODO put in INI
 # show_graph_after_bgk_application_b <- config$getboolean(option = "show_graph_after_bgk_application_b", section = "plot_and_display")  # as.logical("True")  # TODO put in INI
 # show_graph_with_dashed_removed_b <- config$getboolean(option = "show_graph_with_dashed_removed_b", section = "plot_and_display") # as.logical("False")  # TODO put in INI
