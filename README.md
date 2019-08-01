@@ -104,11 +104,11 @@ Each dataset must be provided as CSV files where:
 We refer to this example dataset as **Dataset_01**
 
 | *Identifier* | *Variable1_01* | *Variable1_02* | *Variable1_02* | ... |
-| -------- | --------- | --------- | --------- | --- |
-| id01   | 45       | 0         | 1        | ... |
-| id02   | 0.5       | 42         | 0         | ... |
-| id03   | -8         | 0         | 0.25      | ... |
-| id04   | 48         | 10         | 5.25      | ... |
+| ------------ | -------------- | -------------- | -------------- | --- |
+| id01         | 45             | 0              | 1              | ... |
+| id02         | 0.5            | 42             | 0              | ... |
+| id03         | -8             | 0              | 0.25           | ... |
+| id04         | 48             | 10             | 5.25           | ... |
 
 #### Multiple datasets
 If  multiple datasets are given as input, they will be inner-joined with respect to the first column. 
@@ -116,31 +116,31 @@ This means that Galaina will create internally a new database made by only the i
 
 ##### Example:
 
-Together with Dataset_01, we give as input two more datasets:
+Together with Dataset_01, we give as input two more datasets; the value of `Variable3_02` for `id02` in `Dataset_03` is missing:
 
 **Dataset_02**
 
 | *Identifier* | *Variable2_01* | *Variable2_02* | *Variable2_03* | ... |
-| -------- | --------- | --------- | --------- | --- |
-| id02     | 4.5       | 442       | 4         | ... |
-| id03     | 48        | 4         | 4.25      | ... |
-| id04     | 448       | 40        | 9.25      | ... |
+| ------------ | -------------- | -------------- | -------------- | --- |
+| id02         | 4.5            | 442            | 4              | ... |
+| id03         | 48             | 4              | 4.25           | ... |
+| id04         | 448            | 40             | 9.25           | ... |
 
 **Dataset_03**
 
 | *Identifier* | *Variable3_01* | *Variable3_02* | *Variable3_02* | ... |
-| -------- | --------- | --------- | --------- | --- |
-| id01   | 75       | 3         | 3        | ... |
-| id02   | 3.5       | 32         | 0.3         | ... |
-| id04   | 38         | 30         | 3.25      | ... |
-| id05   | 58         | 35         | 5.25      | ... |
+| ------------ | -------------- | -------------- | -------------- | --- |
+| id01         | 75             | 3              | 3              | ... |
+| id02         | 3.5            |                | 0.3            | ... |
+| id04         | 38             | 30             | 3.25           | ... |
+| id05         | 58             | 35             | 5.25           | ... |
 
 Then Galaina will process the resulting dataset, made only by `id02` and `id04`:
 
 | *Identifier* | *Variable1_01* | *Variable1_02* | *Variable1_02* | *Variable2_01* | *Variable2_02* | *Variable2_03* | *Variable3_01* | *Variable3_02* | *Variable3_03* | ... |
-| -------- | --------- | --------- | --------- | -------- | --------- | --------- | --------- | -------- | --------- | --------- |
-| id02   | 0.5       | 42         | 0         |  4.5       | 442         | 4         | 3.5       | 32         | 0.3         | ... |
-| id04   | 48         | 10         | 5.25      |  448         | 40         | 9.25    | 38         | 30         | 3.25      | ... |
+| ------------ | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- | --- |
+| id02         | 0.5            | 42             | 0              | 4.5            | 442            | 4              | 3.5            |                | 0.3            | ... |
+| id04         | 48             | 10             | 5.25           | 448            | 40             | 9.25           | 38             | 30             | 3.25           | ... |
 
 
 ### Input Factor models
@@ -170,14 +170,14 @@ The factor model file must satisfy one of the following formats:
 
     Factor Loading Matrix representation of [factor model example](#factor-model-example) above.
 
-    | *Variable* | Var01   | Factor02 | Factor03 |
-    | --------   | --------- | --------- | --------- |
-    | Var01    | 1          | 0         | 0         |
-    | Var02   | 0          | 0.75         | 0         |
-    | Var03   | 0          | 0.25         | 0
-    | Var04   | 0          | 0         | 5      |
-    | Var05   | 0          | 0         | 25      |
-    | Var06   | 0          | 0         | 25      |
+| *Variable* | Var01 | Factor02 | Factor03 |
+| ---------- | ----- | -------- | -------- |
+| Var01      | 1     | 0        | 0        |
+| Var02      | 0     | 0.75     | 0        |
+| Var03      | 0     | 0.25     | 0        |
+| Var04      | 0     | 0        | 5        |
+| Var05      | 0     | 0        | 25       |
+| Var06      | 0     | 0        | 25       |
 
 1. #### Factor Table
     CSV file with 3 columns listing the loading for each variable/factor combination. 
@@ -188,14 +188,14 @@ The factor model file must satisfy one of the following formats:
 
     Factor Table representation of [factor model example](#factor-model-example) above.
 	
-    | *Variable* | *Factor* | *Loading* |
-    | --- | --- | --- |
-    | Var01    | Var01 | 1 |
-    | Var02    | Factor02 | 0.75 |
-    | Var03    | Factor02 | 0.25 |
-    | Var04    | Factor03 | 5 |
-    | Var05    | Factor03 | 25 |
-    | Var06    | Factor03 | 25 |
+| *Variable* | *Factor* | *Loading* |
+| ---------- | -------- | --------- |
+| Var01      | Var01    | 1         |
+| Var02      | Factor02 | 0.75      |
+| Var03      | Factor02 | 0.25      |
+| Var04      | Factor03 | 5         |
+| Var05      | Factor03 | 25        |
+| Var06      | Factor03 | 25        |
 
 1. #### Factor Variable List
     CSV file with 2 columns listing for each factor the associated linear combinations of variables.
@@ -206,11 +206,11 @@ The factor model file must satisfy one of the following formats:
 
     Factor Variable List representation of [factor model example](#factor-model-example) above.
 
-    | *Factor*| *Variable_list* |
-    | --- | --- |
-    | Var01 | Var01 |
-    | Factor02 | 0.75 * Var02 + 0.25 * Var03 |
-    | Factor03 | 5 * Var04 + 25 * Var05 + 25 * Var06 | 
+| *Factor* | *Variable_list*                     |
+| -------- | ----------------------------------- |
+| Var01    | Var01                               |
+| Factor02 | 0.75 * Var02 + 0.25 * Var03         |
+| Factor03 | 5 * Var04 + 25 * Var05 + 25 * Var06 |
 
 ### Output Files
 
@@ -241,10 +241,10 @@ A `bn.strength` object is an R data frame with the following four columns (one r
 
     Then the filtered CSV with the structure model is as follow:
 
-    | from | to | strength | direction |
-    | --- | --- | --- | --- |
-    | Var01 | Factor02 | 0.8 | 0.6 |
-    | Factor03 | Factor02 | 0.6 | 0.5 |
+| from     | to       | strength | direction |
+| -------- | -------- | -------- | --------- |
+| Var01    | Factor02 | 0.8      | 0.6       |
+| Factor03 | Factor02 | 0.6      | 0.5       |
 
 
 ## Acknowledgement and Disclaimer 
