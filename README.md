@@ -237,13 +237,14 @@ A `bn.strength` object is an R data frame with the following four columns (one r
 
     Let us suppose that by running Galaina on a given dataset and the [example factor model](#factor-model-example) we obtain the following structure model:
     *  A path from `Var01` to `Factor02` with path likelihood 0.8 and direction likelihood 0.6.
-    *  A directionless path connecting `Factor03` to `Factor02` with path likelihood 0.6.
+    *  A directionless path connecting `Factor02` and `Factor03` with path likelihood 0.6.
 
     Then the filtered CSV with the structure model is as follow:
 
 | from     | to       | strength | direction |
 | -------- | -------- | -------- | --------- |
 | Var01    | Factor02 | 0.8      | 0.6       |
+| Factor02 | Factor03 | 0.6      | 0.5       |
 | Factor03 | Factor02 | 0.6      | 0.5       |
 
 
