@@ -145,7 +145,7 @@ class FactorInfo:
         # https://stackoverflow.com/questions/7374748/whats-the-difference-between-a-python-property-and-attribute
         # TODO use FactorInfoFactory
         tmp_df = factor_df.copy()
-        tmp_df.columns.rename(None, inplace=True)
+        tmp_df.columns.rename(None, inplace=True)  # Remove name column index
         # factor_type_str = FactorInfoFactory(factor_df).determine_factor_type()
         self.factor_df = tmp_df
         # self.factor_df.columns.name = None
@@ -235,11 +235,14 @@ class FactorVarSetDF(FactorInfo):
         loading_matrix_df.loc["f1", "x1"] = a1 ** -1. Variables absent in the formula will be set to zero
         """
         pattern_str = r"([+-])?\s*(?:(\d+)\s*\*\s*)?([a-zA-Z]\w*)"
-        loading_df = self.factor_df['Variable_set'].apply(
+        header_column_str = self.factor_df.columns[0]  # Compatible with 'Variable_set' and 'Variable_list'
+        # loading_df = self.factor_df['Variable_set'].apply(
+        loading_df = self.factor_df[header_column_str].apply(
             lambda formula_str: pd.Series(
-                {iVar: int(iSign + (iCoeff or '1')) ** -1
-                 for (iSign, iCoeff, iVar) in re.findall(pattern_str, formula_str)
-                 }
+                {
+                    iVar: int(iSign + (iCoeff or '1')) ** -1
+                    for (iSign, iCoeff, iVar) in re.findall(pattern_str, formula_str)
+                }
             )
         ).fillna(0.0).astype(float).T
         factor_loading_df = FactorLoadingDF(loading_df)
@@ -400,7 +403,11 @@ def save_to_csv_for_r(input_df, path_to_data_file, config):
     :param config:
     :return:
     """
-    input_df.to_csv(path_to_data_file, sep=config.get_csv_separator(), na_rep='', index_label=False)
+    input_df.to_csv(
+        path_to_data_file, sep=config.get_csv_separator(),
+        na_rep='',
+        index_label=False
+    )
 
 
 def load_input_csv(path_to_data_file, config):
