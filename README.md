@@ -198,7 +198,7 @@ The factor model file must satisfy one of the following formats:
 | Var06      | Factor03 | 25        |
 
 1. #### Factor Variable List
-    CSV file with 2 columns listing for each factor the associated linear combinations of variables.
+    CSV file with 2 columns listing for each factor the associated linear combinations of variables; the coefficients are the inverse of the factor loadings.
     Header is fixed and must contain the column names `Factor` and `Variable_list` (or `Factor` and `Variable_set`).
 
     <!-- **Example:** -->
@@ -206,11 +206,11 @@ The factor model file must satisfy one of the following formats:
 
     Factor Variable List representation of [factor model example](#factor-model-example) above.
 
-| *Factor* | *Variable_list*                     |
-| -------- | ----------------------------------- |
-| Var01    | Var01                               |
-| Factor02 | 0.75 * Var02 + 0.25 * Var03         |
-| Factor03 | 5 * Var04 + 25 * Var05 + 25 * Var06 |
+| *Factor* | *Variable_list*                           |
+| -------- | ----------------------------------------- |
+| Var01    | Var01                                     |
+| Factor02 | 1.33 * Var02 + 4 * Var03                  |
+| Factor03 | 0.2 * Var04 + 0.04 * Var05 + 0.04 * Var06 |
 
 ### Output Files
 
