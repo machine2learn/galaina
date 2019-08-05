@@ -34,6 +34,7 @@ library(Rgraphviz)  # for using toDot
 fileConn <- file("output.txt", 'a')  # TODO get it from config
 sink(file = fileConn, append = TRUE, type='message')  # future: unset type and use sink for managing outptu. Modify print_and_append_to_log because it could become redundant
 
+
 args <- commandArgs(trailingOnly=TRUE)  # uncomment for taking config path argument from Python
 config <- ConfigParser$new(Sys.getenv(), optionxform=identity)
 config$read(filepath = args[1])
@@ -100,17 +101,19 @@ original_bootstrap_n <- as.integer(
 )  # in INI e.g. 500
 causal_discovery_algorithm_run_n <- max(original_bootstrap_n, 1)  # if original_bootstrap_n ==0, we know that no boostrap must be performed
 
-if (original_bootstrap_n >= 1) {
-  bootstrap_first_random_seed_n <- as.integer(
-    config$getfloat(option = "bootstrap_first_random_seed_n", section = "edge_weight_algorithm")
-    # args[6]
-  ) #100 
-  bootstrap_random_seed_update_parameter_n <- as.integer(
-    config$getfloat(option = "bootstrap_random_seed_update_parameter_n", section = "edge_weight_algorithm")
-    # args[6]
-  )
-  bootstrap_random_seed_n <- bootstrap_first_random_seed_n
-}
+# perform_bootstrap_b <- (original_bootstrap_n >= 1)
+no_perform_bootstrap_b <- (original_bootstrap_n == 0)
+# if (perform_bootstrap_b) {
+bootstrap_first_random_seed_n <- as.integer(
+  config$getfloat(option = "bootstrap_first_random_seed_n", section = "edge_weight_algorithm")
+  # args[6]
+) #100
+bootstrap_random_seed_update_parameter_n <- as.integer(
+  config$getfloat(option = "bootstrap_random_seed_update_parameter_n", section = "edge_weight_algorithm")
+  # args[6]
+)
+bootstrap_random_seed_n <- bootstrap_first_random_seed_n
+# }
 input_path_directed_edges_blacklist <- config$get(option = "input_path_directed_edges_blacklist", fallback = "", section = "input_paths_and_related_parameters")   # args[8]
 
 # cat("Gibbs total samples:", gibbs_sampling_n, "\n")
@@ -193,9 +196,10 @@ pc_parameters_ls <- list(
 # This loop outputs: run2suffstat_ls, run2pcalgo_ls, run2pcalgo_bad_ls
 # We could turn the loop core into a function taking as input run2suffstat_ls, run2pcalgo_ls, run2pcalgo_bad_ls AND other stuff adn outputing I think only those 3
 # original_bootstrap_n, fileConn, data_df
+output_path_suffstat <- config$get(option = "output_path_suffstat", fallback = "", section = "output_paths")
 for (iRun_n in 1:causal_discovery_algorithm_run_n) {
   ## 2.1 Bootstrap
-  if (original_bootstrap_n < 1) {
+  if (no_perform_bootstrap_b) {
     # cat("No bootstrap performed \n")
     print_and_append_to_log(c("No bootstrap performed \n"), fileConn)
     tmp_run_data_df <- data_df
@@ -225,31 +229,51 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
     #   row.names=FALSE,
     #   na=""
     # )
-
   }
   ## 2.2 Perform inference
-  repeat {
-    tmp_cop_fac_obj <- tryCatch(
-      my_inferCopulaFactorModel(
-        # Y_df = tmp_run_data_df,
-        Y = data.matrix(tmp_run_data_df),
-        Lambda = data.matrix(factor_loading_df),
-        nsamp = gibbs_sampling_n,
-        odens = odens_n,  # Store each Gibbs sampling output
-        first_random_seed = gibbs_first_random_seed_n,
-        random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
-        fileConn = fileConn
-      ),   # , tol = 1e-22)
-      error = identity
-    )
-    if (!is(tmp_cop_fac_obj, "error")) {
-      break
+  print_and_append_to_log("Perform inference\n", fileConn)
+  if (no_perform_bootstrap_b) {  # Used for testing, but in theory the repeat would be enough
+    tmp_cop_fac_obj <- my_inferCopulaFactorModel(
+      # Y_df = tmp_run_data_df,
+      Y = data.matrix(tmp_run_data_df),
+      Lambda = data.matrix(factor_loading_df),
+      nsamp = gibbs_sampling_n,
+      odens = odens_n,  # Store each Gibbs sampling output
+      first_random_seed = gibbs_first_random_seed_n,
+      random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
+      output_intermediate = output_path_suffstat,
+      run_id = iRun_n,  # save intermediate Sigma.psamp for each bootstrap/run
+      fileConn = fileConn
+    )   # , tol = 1e-22)
+  } else {
+    repeat {
+      tmp_cop_fac_obj <- tryCatch(
+        my_inferCopulaFactorModel(
+          # Y_df = tmp_run_data_df,
+          Y = data.matrix(tmp_run_data_df),
+          Lambda = data.matrix(factor_loading_df),
+          nsamp = gibbs_sampling_n,
+          odens = odens_n,  # Store each Gibbs sampling output
+          first_random_seed = gibbs_first_random_seed_n,
+          random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
+          output_intermediate = output_path_suffstat,
+          run_id = iRun_n,  # save intermediate Sigma.psamp for each bootstrap/run
+          fileConn = fileConn
+        ),   # , tol = 1e-22)
+        error = identity
+      )
+      if (!is(tmp_cop_fac_obj, "error") || no_perform_bootstrap_b) {
+        break
+      }
+      set.seed(bootstrap_random_seed_n) # for testing set seed to
+      print_and_append_to_log(c("Repeat current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
+      print_and_append_to_log(c("Random seed bootstrap sample:", bootstrap_random_seed_n, "\n"), fileConn)
+      iteration_rows_id <- sample(nrow(data_df), replace = TRUE)
+      bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
+      tmp_run_data_df <- data_df[iteration_rows_id, ]
     }
-    bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
-    print_and_append_to_log(c("Repeat current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
-    print_and_append_to_log(c("Random seed bootstrap sample:", bootstrap_random_seed_n, "\n"), fileConn)
-    tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
   }
+
 
   # cat(dim(tmp_cop_fac_obj$Sigma.psamp), "\n")
   # Extract samples of the correlation matrix over latent variables, ignoring the first samples (burn-in)
@@ -316,7 +340,7 @@ for (iRun_n in 1:causal_discovery_algorithm_run_n) {
   #         pc_parameter_ls[['suffStat']] <- list(C = C, n = causal_discovery_observation_n)
   #     b. tmp_graph_cfpc <- do.call("pc", pc_parameter_ls)
   # old_pc_parameters_ls <- pc_parameters_ls 
-  tmp_suffstat_ls <- list(C = C, n = tmp_causal_discovery_observation_n) 
+  tmp_suffstat_ls <- list(C = C, n = tmp_causal_discovery_observation_n)
   run2suffstat_ls[[iRun_n]] <- tmp_suffstat_ls
   # For parallelization, we could just make a function returning tmp_suffstat_ls and store it into run2suffstat_ls.
   # After that, in another loop, we can run the causal discovery algorithm and store
@@ -436,7 +460,7 @@ if (!stri_isempty(output_path_pc_algo_obj)) {
   saveRDS(run2pcalgo_ls, file = output_path_pc_algo_obj)
 }
  
-if (original_bootstrap_n < 1) {
+if (no_perform_bootstrap_b) {
   bn_obj <- as.bn(run2pcalgo_ls[[1]], check.cycles = FALSE)  # We are ok with cycles
 } else {
   removed_graph_due_to_blacklist_bv <- sapply(X = run2pcalgo_ls, FUN = is.null)
@@ -544,20 +568,28 @@ first_title <- main_plot_title_str  # 'Causal graph with all edges'
 
 # cat(first_title, "\n")
 # if (show_graph_before_bgk_application_b) {
-if (original_bootstrap_n >= 1) {
+if (no_perform_bootstrap_b) {
+  # TODO - output to var, convert and save it
+  plot(run2pcalgo_ls[[1]], main = first_title)  # if
+  } else {
   # TODO - output to var, convert to bn <- strength (if needed), convert to DOT format or other and save to path specified in INI
   graph_nel <- strength.plot(x = avg_bn_obj, strength = bn_strength_obj, 
     # threshold = attributes(bn_strength_obj)$threshold, # No need to specify the thershold
-    main = first_title)
+    main = first_title
+  )
   # fix edge
+  # Aug 2019 -
+  # strength.plot() now saves arc strengths as weights in the graphNEL object it returns.
   tmp_key_v <- names(graph_nel@renderInfo@edges[["lwd"]])
   lwd_key2data_key <- as.list(setNames(object = gsub("[~]", "|", tmp_key_v), nm = tmp_key_v ))
   for (iName in names(lwd_key2data_key)) {
+    # graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]] <- graph_nel@edgeData@data[iName]]
     graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]] <- graph_nel@renderInfo@edges[["lwd"]][[iName]]
+    #
     # graph_nel@renderInfo@edges[["arrowhead"]][[iName]] in theory should store the type of arrowhead
     # should be able to use the setter edgeData(graph, from, to, attr)
     # we need also to set the arrowtail
-    # So maybe loading graph_nel and set arrowtail and arrowhead accorging to the amat_pag will be enough
+    # So maybe loading graph_nel and set arrowtail and arrowhead according to the amat_pag will be enough
     # this strength.plot code 
     # https://github.com/cran/bnlearn/blob/414301e1a241148ec7bfb7e06f5eeda00ef2cd2b/R/frontend-plot.R#L34
     # calls inside graphviz.backend that manipulates arrowtail and arrowhead
@@ -565,18 +597,16 @@ if (original_bootstrap_n >= 1) {
     # that inside plot with Rgraphviz::renderGraph(graph.plot)
     # maybe we just need to set arrowhead and tails and then a mod version of strength.plot calling a mod version of graphviz.backend that does not touch arrotail and arrowhead
     #
-    # cat(c(graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]], "\n"))
+    # # cat(c(graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]], "\n"))
   }
   # TODO fix it
-  # toDot(graph = graph_nel, filename = 'graph_output.gv')  # from library(Rgraphviz)
+  # toDot(graph = graph_nel, filename =  sub('.pdf', '.gv', tmp_fig))  # from library(Rgraphviz)
   #
-  # TODO make it store edge weight toDotR(G = graph_nel, outDotFile = "~/Documents/figures/estonian.gv")  # from library(graph)
+  # TODO make it store edge weight
+  #  toDotR(G = graph_nel, outDotFile = "~/Documents/figures/estonian.gv")  # from library(graph)
+  # toDotR(G = graph_nel, outDotFile = sub('.pdf', '.gv', tmp_fig))
   # https://github.com/Bioconductor/graph/blob/master/R/TODOT.R
-} else {
-  # TODO - output to var, convert and save it
-  plot(run2pcalgo_ls[[1]], main = first_title)  # if 
 }
-# }
 
 # Used when we were enforcing balacklist at the end
 # with_blacklist_avg_bn_obj <- avg_bn_obj

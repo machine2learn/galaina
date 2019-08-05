@@ -46,13 +46,15 @@ stopifXnotfinite <- function(Y, X, fileConn, msg) {
 
 my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NULL, nsamp = 1000,
                                        odens = max(1, round(nsamp/1000)), impute = any(is.na(Y)), 
-                                       plugin.threshold = 20, 
+                                       plugin.threshold = 20,
                                        plugin.marginal = (apply(Y, 2, function(x) {
                                        length(unique(x))}) > plugin.threshold), 
                                        verb = TRUE,
                                        tol = .Machine$double.eps,
                                        first_random_seed = 1000,
                                        random_seed_update_parameter = 10,
+                                       output_intermediate="",
+                                       run_id=0,
                                        fileConn = file("output.txt", 'a')
                                        ) {
   #
@@ -63,6 +65,8 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   #   Lambda, a p by k matrix representing the mapping from factors to observed variables
   #   nsamp, No. of samples
   #   odens = for Gibbs-sampling thinning, only Corr matrix after odens sampling is stored
+  #   output_intermediate = path used for generating path where intermediate samples covariance are saved
+  #   run_id = used for output_intermediate file saving
   #
   #   For details about the arguments, refer to function 'sbgcop.mcmc' in R package 'sbgcop'
   #
@@ -186,14 +190,21 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     Y.pmean <- matrix(0, nrow = n, ncol = p)
   }
   LPC <- NULL
-  C.psamp <- array(dim = c(p+k2, p+k2, floor(nsamp/odens)))  # FG This is used in preparation for the Corr matrix computation, it stores the sampled correlation matrices every odens samples
+  stored_samples_n <- floor(nsamp/odens)
+  C.psamp <- array(dim = c(p + k2, p + k2, stored_samples_n))  # FG This is used in preparation for the Corr matrix computation, it stores the sampled correlation matrices every odens samples
   # p + k2 = # variables  +  # factors with multiple indicators
   Y.imp <- NULL
-  Z.imp <- array(dim = c(n, p, floor(nsamp/odens)))
+  Z.imp <- array(dim = c(n, p, stored_samples_n))
   if (impute) {
-    Y.imp <- array(dim = c(n, p, floor(nsamp/odens)))
+    Y.imp <- array(dim = c(n, p, stored_samples_n))
   }
-  #dimnames(C.psamp) <- list(colnames(Y), colnames(Y), 1:floor(nsamp/odens))
+  #dimnames(C.psamp) <- list(colnames(Y), colnames(Y), 1:stored_samples_n)
+
+  last_perc_factor_of_skip_save_n <- 0
+  last_perc_factor_of_skip_print_n <- 0
+  min_odens_skip_print_and_save_n <- 10
+  min_perc_skip_print_n <- 1
+  min_perc_skip_save_n <- 10
 
   # fileConn <- file("output.txt")
   #### start of Gibbs sampling scheme
@@ -321,6 +332,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     # FG so that the first k columns of both X and Lambda (and S) are the same
     if (k2 > 0 ) {
       for (j in index.tmp) {  # FG Loop over variables that don't have dummy factor
+        # TODO create list which_nonzero_loadings_ls[[j]] <- which(Lambda[j, ] != 0)
         q <- which(Lambda[j, ] != 0)  # FG j is used as position of Lambda row
         # maybe assert len(q) = 1
         # q = factor corresponding to j
@@ -404,51 +416,59 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
 
       ### identification condition
       ## Original
-      for (j in index.2) {
-        sign_n <-sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
-        if (sign_n == 0) {
-          print_and_append_to_log(c("Factor", j, "correlation sign adjustment set it to zero"), fileConn)
+
+      if (k2 > 0) {
+        for (j in index.2) {
+          sign_n <-sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
+          if (sign_n == 0) {
+            print_and_append_to_log(c("Factor", j, "correlation sign adjustment set it to zero"), fileConn)
+          }
+          stopifnot((sign_n != 0))
+          X[, j] <- X[, j] * sign_n  #sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
         }
-        stopifnot((sign_n != 0))
-        X[, j] <- X[, j] * sign_n  #sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
       }
-      # ## New - written on  20190703
-      # # #  difference wrt Cui code: now force copula factors to have same signs of input factors
-      # # # sign( sum(lapply( Lambda[, j] * ,sign)
-      # # # cov(X[, j], X[, k2 + which(Lambda[, j] != 0)]))
+      ## New - written on  20190703
+      # #  difference wrt Cui code: now force copula factors to have same signs of input factors
+      # # sign( sum(lapply( Lambda[, j] * ,sign)
+      # # cov(X[, j], X[, k2 + which(Lambda[, j] != 0)]))
+      #
+      # # So X[, j] is my \eta_j as long as j in index.2
+      # # Lambda[i, j] = \gamma_{i, j} is the original factor loadimg for var i nd input factor j
+      # # Not sure if it should be extended also to index.1 that is index of both singleton factors and signelton var
+      # # sign_cX <- sign(cov(X))  # I am also computing cov btw index.2 stuff that I won't need
+      # # rel_sign_cX <- sign_cX[index.2, -index.2]
       # #
-      # # # So X[, j] is my \eta_j as long as j in index.2
-      # # # Lambda[i, j] = \gamma_{i, j} is the original factor loadimg for var i nd input factor j
-      # # # Not sure if it should be extended also to index.1 that is index of both singleton factors and signelton var
-      # # # sign_cX <- sign(cov(X))  # I am also computing cov btw index.2 stuff that I won't need
-      # # # rel_sign_cX <- sign_cX[index.2, -index.2]
-      # # #
-      # rel_sign_cX <- sign(cov(X))[index.2, -index.2]  # I just need Cov btw the multi-variable factors and the variables
-      # # # we want sign(diag(sign_cX %*% rel_sign_orig_Lambda))
-      # # # because we multiply row j of sign_cX with column j of rel_sign_orig_Lambda
-      # # # But this is: for each index
-      # adjust_v <- sign(colSums(t(rel_sign_cX) * rel_sign_orig_lambda))
-      # # # Could this have some zero elements? In theory if the number of variables for a factor is even, it could be
-      # # # Then it is better to edit adjust_v s.t. if it's 0 it is replaced by the original copula sign( cov( X[, j],  X[, k2 + which(Lambda[, j] != 0)[1]] ) )
-      # zero_pos_v = which(adjust_v == 0)
-      # if (length(zero_pos_v) > 0) { # TODO raise something
-      #   print_and_append_to_log(
-      #     c("There are ", length(zero_pos_v), "factors with sign_adjustment_factor = 0. Force first non-zero factor loading of each multivar factor to be positive.", "\n"),
-      #     fileConn
-      #   )
-      #   for (jj in zero_pos_v) {
-      #     adjust_v[jj] <- sign(
-      #       cov(X[, index.2[jj]], X[, k2 + which(Lambda[, index.2[jj]] != 0)[1]])
+      # if (k2 > 0) {
+      #   rel_sign_cX <- sign(cov(X))[index.2, -index.2]  # I just need Cov btw the multi-variable factors and the variables
+      #   # # We want sign(diag(sign_cX %*% rel_sign_orig_Lambda))
+      #   # # Because we multiply row j of sign_cX with column j of rel_sign_orig_Lambda
+      #   # # But this is: for each index
+      #   adjust_v <- sign(colSums(t(rel_sign_cX) * rel_sign_orig_lambda))
+      #   # # Could this have some zero elements? In theory if the number of variables for a factor is even, it could be
+      #   # # Then it is better to edit adjust_v s.t. if it's 0 it is replaced by the original copula sign( cov( X[, j],  X[, k2 + which(Lambda[, j] != 0)[1]] ) )
+      #   zero_pos_v <- which(adjust_v == 0)
+      #   if (length(zero_pos_v) > 0) {  # Raise something
+      #     print_and_append_to_log(
+      #       c("There are ", length(zero_pos_v), "factors with sign_adjustment_factor = 0. Force first non-zero factor loading of each multivar factor to be positive.", "\n"),
+      #       fileConn
+      #     )
+      #     # for (jj in zero_pos_v) {
+      #     #   adjust_v[jj] <- sign(
+      #     #     cov(X[, index.2[jj]], X[, k2 + which(Lambda[, index.2[jj]] != 0)[1]])
+      #     #   )
+      #     # }
+      #     adjust_v[zero_pos_v] <- sign(
+      #       cov(X[, index.2[zero_pos_v]], X[, k2 + which(Lambda[, index.2[zero_pos_v]] != 0)[1]])
       #     )
       #   }
+      #   X[, index.2] <- t(t(X[, index.2]) * adjust_v)  # multiply each column X[, j] with adjust_v[j]
       # }
-      # X[, index.2] <- t(t(X[, index.2]) * adjust_v)  # multiply each column X[, j] with adjust_v[j]
-      # #
-      # #
-      # # could do some elementwise multiplication and then some rows/columns
-      # # for (jj in 1: length(index.2){
-      # #   X[, index.2[jj]] <- X[, index.2[jj]] * sign( dot(rel_sign_orig_Lambda[, index.2[jj]],  sign_cX[jj, ]))
-      # # }
+      #
+      #
+      # could do some elementwise multiplication and then some rows/columns
+      # for (jj in 1: length(index.2){
+      #   X[, index.2[jj]] <- X[, index.2[jj]] * sign( dot(rel_sign_orig_Lambda[, index.2[jj]],  sign_cX[jj, ]))
+      # }
 
       # 2019
       #
@@ -506,8 +526,9 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
     S <- solve(P, tol = tol)  # FG tollerance adde
     S <- cov2cor(S)  # FG transform it to correlation matrix
-    
-    if (ns%%odens == 0) {
+
+    # Store the samples every #odens samples
+    if (ns %% odens == 0) {
       C <- S#/(sqrt(diag(S)) %*% t(sqrt(diag(S))))
       if (is.null(trueSigma)) {
         lpc <- ldmvnorm(scale(X), C)  # FG compute log of the multivariate normal density
@@ -515,7 +536,9 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
         lpc <- ldmvnorm(scale(X), trueSigma)
       }
       LPC <- c(LPC, lpc)
-      C.psamp[, , ns/odens] <- C #cor(X)#
+      storing_position_n <- as.integer(ns/odens)
+
+      C.psamp[, , storing_position_n] <- C #cor(X)#
       if (impute) {  # imputing missing values of Y
         # FG missing values of Y are imputed each time
         #
@@ -544,19 +567,34 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
           #   type = 1
           # )
         }
-        Y.imp[, , ns/odens] <- Y.imp.s
+        Y.imp[, , storing_position_n] <- Y.imp.s
         # print(Y.imp.s)
-        Y.pmean <- ((ns/odens - 1)/(ns/odens)) * Y.pmean + (1/(ns/odens)) * Y.imp.s  # here was the error
+        Y.pmean <- ((storing_position_n - 1)/storing_position_n) * Y.pmean + (1/storing_position_n) * Y.imp.s  # here was the error
+        # Y.pmean <- 1 * Y.pmean + storing_position_n ^ (-1) * (Y.imp.s  - Y.pmean)
       }
-      Z.imp[, , ns/odens] <- cbind(Z1, Z2)
+      Z.imp[, , storing_position_n] <- cbind(Z1, Z2)
     }
-    if (verb == TRUE & (ns%%(odens * 10)) == 0) {
+    every_x_odens_b <- ((ns %% (odens * min_odens_skip_print_and_save_n)) == 0)
+    if (every_x_odens_b) {  # print & and save at most every 10 thinning samples
+      perc_completed_n <- round(100 * ns/nsamp, digits = 2)
+      perc_factor_of_skip_print_n <- (perc_completed_n %/% min_perc_skip_print_n)  #, digits = 0)
+      perc_factor_of_skip_save_n <- (perc_completed_n %/% min_perc_skip_save_n)
+    }
+    if (every_x_odens_b && (verb == TRUE) && (perc_factor_of_skip_print_n > last_perc_factor_of_skip_print_n) ) {  # print this every 10 thinning samples
       print_and_append_to_log(
-        c(round(100 * ns/nsamp), "percent done ", date(), "\n"), fileConn
+        c(perc_completed_n, "percent done ", date(), "\n"), fileConn
       )
-      # tmp_log_str_v <- c(round(100 * ns/nsamp), "percent done ", date(), "\n")
-      # cat(tmp_log_str_v)
-      # write(paste(tmp_log_str_v, collapse = " "), file=fileConn, append=TRUE)
+      last_perc_factor_of_skip_print_n <- perc_factor_of_skip_print_n
+    }
+
+    if (every_x_odens_b && ( perc_factor_of_skip_save_n > last_perc_factor_of_skip_save_n ) && !stri_isempty(output_intermediate) ) {
+      saveRDS(C.psamp,
+        file = sub('.rds',
+          paste0('_run_', run_id, '_only_cov_perc_', min_perc_skip_save_n * perc_factor_of_skip_save_n, '_thin_', storing_position_n, '_of_', stored_samples_n ,'.rds'),
+          output_intermediate
+        )
+      )
+      last_perc_factor_of_skip_save_n <- perc_factor_of_skip_save_n
     }
   }
   # close(fileConn)
