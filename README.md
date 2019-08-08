@@ -166,51 +166,51 @@ The factor model file must satisfy one of the following formats:
     The first cell must contain the string `Variable`.
 
     <!-- **Example:** -->
-    ##### Example
+   ##### Example
 
     Factor Loading Matrix representation of [factor model example](#factor-model-example) above.
 
-| *Variable* | Var01 | Factor02 | Factor03 |
-| ---------- | ----- | -------- | -------- |
-| Var01      | 1     | 0        | 0        |
-| Var02      | 0     | 0.75     | 0        |
-| Var03      | 0     | 0.25     | 0        |
-| Var04      | 0     | 0        | 5        |
-| Var05      | 0     | 0        | 25       |
-| Var06      | 0     | 0        | 25       |
+    | *Variable* | Var01 | Factor02 | Factor03 |
+    | ---------- | ----- | -------- | -------- |
+    | Var01      | 1     | 0        | 0        |
+    | Var02      | 0     | 0.75     | 0        |
+    | Var03      | 0     | 0.25     | 0        |
+    | Var04      | 0     | 0        | 5        |
+    | Var05      | 0     | 0        | 25       |
+    | Var06      | 0     | 0        | 25       |
 
-1. #### Factor Table
+2. #### Factor Table
     CSV file with 3 columns listing the loading for each variable/factor combination. 
     Header is fixed and must contain the column names `Variable`, `Factor`, `Loading`.
 
-    ##### Example
+   ##### Example
     <!-- **Example:** -->
 
     Factor Table representation of [factor model example](#factor-model-example) above.
 	
-| *Variable* | *Factor* | *Loading* |
-| ---------- | -------- | --------- |
-| Var01      | Var01    | 1         |
-| Var02      | Factor02 | 0.75      |
-| Var03      | Factor02 | 0.25      |
-| Var04      | Factor03 | 5         |
-| Var05      | Factor03 | 25        |
-| Var06      | Factor03 | 25        |
+    | *Variable* | *Factor* | *Loading* |
+    | ---------- | -------- | --------- |
+    | Var01      | Var01    | 1         |
+    | Var02      | Factor02 | 0.75      |
+    | Var03      | Factor02 | 0.25      |
+    | Var04      | Factor03 | 5         |
+    | Var05      | Factor03 | 25        |
+    | Var06      | Factor03 | 25        |
 
-1. #### Factor Variable List
+3. #### Factor Variable List
     CSV file with 2 columns listing for each factor the associated linear combinations of variables; the coefficients are the inverse of the factor loadings.
     Header is fixed and must contain the column names `Factor` and `Variable_list` (or `Factor` and `Variable_set`).
 
     <!-- **Example:** -->
-    ##### Example
+   ##### Example
 
     Factor Variable List representation of [factor model example](#factor-model-example) above.
 
-| *Factor* | *Variable_list*                           |
-| -------- | ----------------------------------------- |
-| Var01    | Var01                                     |
-| Factor02 | 1.33 * Var02 + 4 * Var03                  |
-| Factor03 | 0.2 * Var04 + 0.04 * Var05 + 0.04 * Var06 |
+    | *Factor* | *Variable_list*                           |
+    | -------- | ----------------------------------------- |
+    | Var01    | Var01                                     |
+    | Factor02 | 1.33 * Var02 + 4 * Var03                  |
+    | Factor03 | 0.2 * Var04 + 0.04 * Var05 + 0.04 * Var06 |
 
 ### Output Files
 
