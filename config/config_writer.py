@@ -109,7 +109,7 @@ class ConfigWriter:
                       os.path.join(path, 'output', 'output_path_merged_factor_model_loading.csv'))
         self.add_item('output_paths', 'output_path_fig', os.path.join(path, 'output', 'output_path_fig.pdf'))
         self.add_item('output_paths', 'output_path_log', os.path.join(path, 'output', 'output_path_log.txt'))
-        self.add_item('output_paths', 'output_path_suffstat', '')
+        self.add_item('output_paths', 'output_path_suffstat', os.path.join(path, 'output', 'output_suff_stat.rds'))
         self.add_item('output_paths', 'output_path_pc_algo_obj',
                       os.path.join(path, 'output', 'output_path_pc_algo_obj.rds'))
         self.add_item('output_paths', 'output_path_bn_strength_obj',
