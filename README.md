@@ -57,17 +57,18 @@ brew install v8
 #### R console
 
 ```r
+install.packages("V8")
 source("http://bioconductor.org/biocLite.R") 
 biocLite("RBGL")
 install.packages(c("devtools", "dplyr", "shiny", "ggplot2", "tidyr", "caret", "nnet"), dependencies=TRUE)
-install.packages(c("mvtnorm"))
+install.packages("mvtnorm")
 install.packages(c("dagitty", "infotheo", "sbgcop"))
 library(devtools)  # to use install_github
 install_github("cran/BDgraph@2.44")  # Install version 2.44 of BDgraph
 source("http://bioconductor.org/biocLite.R") 
 biocLite("Rgraphviz")  # for visualizing causal discovery results (a graph) 
 install.packages(c("latex2exp", "polycor", "pcalg", "gRain", "bnlearn", "ConfigParser", "stringi", "ggplotify"))
-install.packages(c("here"))
+install.packages("here")
 ```
 
 
@@ -84,7 +85,7 @@ python main.py
 1. Now the internal web-server is active and it can be accessed by a web browser (preferably Chrome or Firefox). The default URL is `http://127.0.0.1:5000/`. 
 1. Sign in with the following credentials:
    * Username: `test`
-   * Passowrwd: `test12345`
+   * Password: `test12345`
 1. Upload the data and factor model files, edit the configurations accordingly, and run.
 
 
@@ -160,57 +161,64 @@ All the example tables of this section are based on the following factor model. 
 
 <!-- A variable can be a factor only if no other variables have it as a factor. -->
 The factor model file must satisfy one of the following formats:
-1. #### Factor Loading Matrix
-    CSV file s.t. each cell contain the factor loading for the related variable/factor combination.
-    <!-- `cell_value = Loading_matrix(Variable, Factor)` -->
-    The first cell must contain the string `Variable`.
 
-    <!-- **Example:** -->
-   ##### Example
 
-    Factor Loading Matrix representation of [factor model example](#factor-model-example) above.
+#### 1. Factor Loading Matrix
 
-    | *Variable* | Var01 | Factor02 | Factor03 |
-    | ---------- | ----- | -------- | -------- |
-    | Var01      | 1     | 0        | 0        |
-    | Var02      | 0     | 0.75     | 0        |
-    | Var03      | 0     | 0.25     | 0        |
-    | Var04      | 0     | 0        | 5        |
-    | Var05      | 0     | 0        | 25       |
-    | Var06      | 0     | 0        | 25       |
+CSV file such that each cell contains the factor loading for the related variable/factor combination.
+<!-- `cell_value = Loading_matrix(Variable, Factor)` -->
+The first cell must contain the string `Variable`.
 
-2. #### Factor Table
-    CSV file with 3 columns listing the loading for each variable/factor combination. 
-    Header is fixed and must contain the column names `Variable`, `Factor`, `Loading`.
+<!-- **Example:** -->
+##### Example
 
-   ##### Example
-    <!-- **Example:** -->
+Factor Loading Matrix representation of [factor model example](#factor-model-example) above.
 
-    Factor Table representation of [factor model example](#factor-model-example) above.
-	
-    | *Variable* | *Factor* | *Loading* |
-    | ---------- | -------- | --------- |
-    | Var01      | Var01    | 1         |
-    | Var02      | Factor02 | 0.75      |
-    | Var03      | Factor02 | 0.25      |
-    | Var04      | Factor03 | 5         |
-    | Var05      | Factor03 | 25        |
-    | Var06      | Factor03 | 25        |
+| *Variable* | Var01 | Factor02 | Factor03 |
+| ---------- | ----- | -------- | -------- |
+| Var01      | 1     | 0        | 0        |
+| Var02      | 0     | 0.75     | 0        |
+| Var03      | 0     | 0.25     | 0        |
+| Var04      | 0     | 0        | 5        |
+| Var05      | 0     | 0        | 25       |
+| Var06      | 0     | 0        | 25       |
 
-3. #### Factor Variable List
-    CSV file with 2 columns listing for each factor the associated linear combinations of variables; the coefficients are the inverse of the factor loadings.
-    Header is fixed and must contain the column names `Factor` and `Variable_list` (or `Factor` and `Variable_set`).
 
-    <!-- **Example:** -->
-   ##### Example
+#### 2. Factor Table
 
-    Factor Variable List representation of [factor model example](#factor-model-example) above.
+CSV file with 3 columns listing the loading for each variable/factor combination. 
+Header is fixed and must contain the column names `Variable`, `Factor`, `Loading`.
 
-    | *Factor* | *Variable_list*                           |
-    | -------- | ----------------------------------------- |
-    | Var01    | Var01                                     |
-    | Factor02 | 1.33 * Var02 + 4 * Var03                  |
-    | Factor03 | 0.2 * Var04 + 0.04 * Var05 + 0.04 * Var06 |
+##### Example
+<!-- **Example:** -->
+
+Factor Table representation of [factor model example](#factor-model-example) above.
+
+| *Variable* | *Factor* | *Loading* |
+| ---------- | -------- | --------- |
+| Var01      | Var01    | 1         |
+| Var02      | Factor02 | 0.75      |
+| Var03      | Factor02 | 0.25      |
+| Var04      | Factor03 | 5         |
+| Var05      | Factor03 | 25        |
+| Var06      | Factor03 | 25        |
+
+
+#### 3. Factor Variable List
+
+CSV file with 2 columns listing for each factor the associated linear combinations of variables; the coefficients are the inverse of the factor loadings.
+Header is fixed and must contain the column names `Factor` and `Variable_list` (or `Factor` and `Variable_set`).
+
+<!-- **Example:** -->
+##### Example
+
+Factor Variable List representation of [factor model example](#factor-model-example) above.
+
+| *Factor* | *Variable_list*                           |
+| -------- | ----------------------------------------- |
+| Var01    | Var01                                     |
+| Factor02 | 1.33 * Var02 + 4 * Var03                  |
+| Factor03 | 0.2 * Var04 + 0.04 * Var05 + 0.04 * Var06 |
 
 ### Output Files
 
@@ -252,4 +260,4 @@ A `bn.strength` object is an R data frame with the following four columns (one r
 
 This project has received funding from the European Union's Seventh Framework Programme for research, technological development and demonstration under grant agreement no 602805.
 The research leading to these results has received funding from the European Community's Seventh Framework Programme (FP7/2007-2013) under Grant Agreement no 278948.
-This project is co-funded by the Ambient Assisted Living (AAL) Joint programme, by the german BMBF, the French ANR, the Austrian BMVIT.
+This project is co-funded by the Ambient Assisted Living (AAL) Joint programme, by the German BMBF, the French ANR, the Austrian BMVIT.
