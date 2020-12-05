@@ -174,9 +174,17 @@ class FactorModelDF(FactorInfo):
         :return: FactorLoadingDF()
         """
         # Create loading matrix
-        loading_df = self.factor_df.set_index([self.factor_df.index, 'Factor']).unstack(
-            level=1).fillna(0.0).astype(float)
+        #
+        # loading_df = self.factor_df.set_index([self.factor_df.index, 'Factor']).unstack(
+        #     level=1).fillna(0.0).astype(float)
+        tmp_df = self.factor_df.set_index([self.factor_df.index, 'Factor'])
+        # preserve variable (row) ordering of factor_df
+        loading_df = tmp_df.unstack(level=1, fill_value=0.0).astype(float).reindex(tmp_df.index.get_level_values(0))
         loading_df.columns = loading_df.columns.droplevel(0)  # Remove the column header 'Loading'
+        unstructured_variable_col_idx = loading_df.index.intersection(loading_df.columns)
+        # unstructured_variable_index, _ = self.get_unstructured_and_structured_variables()
+        multivar_factor_col_idx = loading_df.columns.drop(unstructured_variable_col_idx)
+        loading_df = loading_df.loc[:, unstructured_variable_col_idx.append(multivar_factor_col_idx)]
         factor_loading_obj = FactorLoadingDF(loading_df)
         factor_loading_obj.adjust_factor_loading_index_and_columns_name()  # TODO inheritance
         return factor_loading_obj
@@ -280,7 +288,7 @@ class InfoToDF:
 
     def sort_factors_and_variables_with_unstructured_first(self):
         """
-        Just doing it because it looks to me that Ruifei code indirectly requires it
+        R code works better if unstructured variables are before the structured ones
         Used for merged_info2df
         """
         # TODO only works with factorInfo of FactorModelDF type
@@ -349,7 +357,7 @@ class InfoToDF:
         assert not structured_variable_index.isin(self.type2factor['factor_model_df'].factor_df['Factor']).any(), \
             "Some factors are also variables"
         # TODO TEST maybe check that all proper factor have at least 2 associated variables
-        assert (self.type2factor['factor_model_df'].factor_df.loc[ structured_variable_index, 'Factor'].value_counts() > 1).all(), \
+        assert (self.type2factor['factor_model_df'].factor_df.loc[structured_variable_index, 'Factor'].value_counts() > 1).all(), \
             "Some factors of structured variables have just one structured variable associated. Please check that factors with just one structured variable associated have the same name of the variable."
 
 
