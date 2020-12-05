@@ -94,7 +94,11 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   #### handle Lambda and get prior graph G
   original_lambda_m <- Lambda  # FG
   Lambda <- 1 * (Lambda!=0)
-  stopifnot(sum(rowSums(Lambda) == 1) == p)  # FG check that is a pure factor model
+  is_pure_factor_model_b <- (sum(rowSums(Lambda) == 1) == p)
+  if (!is_pure_factor_model_b) {
+    print_and_append_to_log(c('Factor model is not pure', '\n'), fileConn)
+  }
+  stopifnot(is_pure_factor_model_b)  # FG check that is a pure factor model
   # No. of factors
   k <- ncol(Lambda)
   # index of factors with a single indicator
@@ -108,7 +112,12 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   # No. of factors with multiple indicators
   k2 <- length(index.2)  # TODO actually maybe is assuming that the factors with multiple indicators come after the ones with single indicator. They are in X by construction
   if (k2 > 0) {
-    stopifnot(max(index.1) < min(index.2))  # FG I belive code assumes that the factors with multiple indicators come after the ones with single indicator
+    condition_careful <- (max(index.1) < min(index.2))
+    if (!condition_careful) {
+      print_and_append_to_log(c('Singleton factors are not all in the first column of loading matrix', '\n'), fileConn)
+      print_and_append_to_log(original_lambda_m, fileConn)
+    }
+    stopifnot(condition_careful)  # FG I belive code assumes that the factors with multiple indicators come after the ones with single indicator
   }
   ## get the pior graph G
   G1 <- matrix(1, k, k) - diag(k)
@@ -181,7 +190,11 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
   if (n < p) {
     S <- S + S0  # New wrt to Cui code: add scale matrix to avoid S be singular FG
   }  # FG
-  stopifnot(all(eigen(data.matrix(S))$values != 0))
+  matrix_not_singular_b <- all(eigen(data.matrix(S))$values != 0)
+  if (!matrix_not_singular_b){
+    print_and_append_to_log(c('Initialized covariance matrix is singular', '\n'), fileConn)
+  }
+  stopifnot(matrix_not_singular_b)
 
   ####
   Y.pmean <- Y
@@ -319,7 +332,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
     # FG could just sample(k1+1:p-k1) if  index.1 is (1:k1) like it is indirectly implied
     # FG WARNING instead of using index.tmp for looping and then always use k2 + j, better directly create a set of indices like k2+j and loop on it. And then get j as Lambda column index somehow
     if (k1 == 0) {
-      index.tmp <- sample(1:p)  # FG randomly premuted 1:p
+      index.tmp <- sample(1:p)  # FG randomly permuted 1:p
     } else {
       index.tmp <- sample((1:p)[-index.1])  # FG randomly permuted index of variables whose factors have multiple indicators
     }
@@ -419,7 +432,7 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
 
       if (k2 > 0) {
         for (j in index.2) {
-          sign_n <-sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
+          sign_n <- sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
           if (sign_n == 0) {
             print_and_append_to_log(c("Factor", j, "correlation sign adjustment set it to zero"), fileConn)
           }
@@ -428,12 +441,12 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
         }
       }
       ## New - written on  20190703
-      # #  difference wrt Cui code: now force copula factors to have same signs of input factors
+      # # Difference wrt Cui code: now force copula factors to have same signs of input factors
       # # sign( sum(lapply( Lambda[, j] * ,sign)
       # # cov(X[, j], X[, k2 + which(Lambda[, j] != 0)]))
       #
       # # So X[, j] is my \eta_j as long as j in index.2
-      # # Lambda[i, j] = \gamma_{i, j} is the original factor loadimg for var i nd input factor j
+      # # Lambda[i, j] = \gamma_{i, j} is the original factor loading for var i and input factor j
       # # Not sure if it should be extended also to index.1 that is index of both singleton factors and signelton var
       # # sign_cX <- sign(cov(X))  # I am also computing cov btw index.2 stuff that I won't need
       # # rel_sign_cX <- sign_cX[index.2, -index.2]
@@ -465,9 +478,9 @@ my_inferCopulaFactorModel <- function (Y, Lambda = diag(ncol(Y)), trueSigma = NU
       # }
       #
       #
-      # could do some elementwise multiplication and then some rows/columns
+      # Could do some elementwise multiplication and then some rows/columns
       # for (jj in 1: length(index.2){
-      #   X[, index.2[jj]] <- X[, index.2[jj]] * sign( dot(rel_sign_orig_Lambda[, index.2[jj]],  sign_cX[jj, ]))
+      #   X[, index.2[jj]] <- X[, index.2[jj]] * sign(dot(rel_sign_orig_Lambda[, index.2[jj]], sign_cX[jj, ]))
       # }
 
       # 2019
