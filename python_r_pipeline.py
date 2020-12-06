@@ -178,10 +178,19 @@ class FactorModelDF(FactorInfo):
         # loading_df = self.factor_df.set_index([self.factor_df.index, 'Factor']).unstack(
         #     level=1).fillna(0.0).astype(float)
         tmp_df = self.factor_df.set_index([self.factor_df.index, 'Factor'])
-        # preserve variable (row) ordering of factor_df
-        loading_df = tmp_df.unstack(level=1, fill_value=0.0).astype(float).reindex(tmp_df.index.get_level_values(0))
-        loading_df.columns = loading_df.columns.droplevel(0)  # Remove the column header 'Loading'
-        unstructured_variable_col_idx = loading_df.index.intersection(loading_df.columns)
+        # Preserve variable (row) ordering of factor_df and sort columns in ascending nr of variables assocaited
+        loading_df = tmp_df.pivot_table(
+            index='Variable', columns='Factor', values='Loading', fill_value=0.0
+        ).astype(float)
+        loading_df = loading_df.reindex(
+            index=tmp_df.index.get_level_values(0),
+            columns=loading_df.ne(0).sum().sort_values().index
+            # self.get_variable_count_per_factor().sort_values().index
+        )
+        # loading_df = tmp_df.unstack(level=1, fill_value=0.0).astype(float).reindex(tmp_df.index.get_level_values(0))
+        # loading_df.columns = loading_df.columns.droplevel(0)  # Remove the column header 'Loading'
+
+        unstructured_variable_col_idx = loading_df.index.intersection(other=loading_df.columns)  # , sort=False)
         # unstructured_variable_index, _ = self.get_unstructured_and_structured_variables()
         multivar_factor_col_idx = loading_df.columns.drop(unstructured_variable_col_idx)
         loading_df = loading_df.loc[:, unstructured_variable_col_idx.append(multivar_factor_col_idx)]
@@ -194,9 +203,13 @@ class FactorModelDF(FactorInfo):
         unstructured variables = variables that are also factor of its own, and the only factor
         Used for merged_info2df
         """
-        unstructured_variable_index = self.factor_df.index.intersection(self.factor_df['Factor'])
+        # unstructured_variable_index = self.factor_df.index.intersection(other=self.factor_df['Factor'], sort=False)
+        unstructured_variable_index = self.factor_df.index.intersection(other=self.factor_df['Factor'])
         structured_variable_index = self.factor_df.index.drop(unstructured_variable_index)
         return unstructured_variable_index, structured_variable_index
+
+    def get_variable_count_per_factor(self):
+        return self.factor_df.groupby('Factor').size().rename('Size')  # .sort_values(ascending=True)
 
 
 class FactorLoadingDF(FactorInfo):
@@ -209,7 +222,7 @@ class FactorLoadingDF(FactorInfo):
         self.factor_df = tmp_df
 
     def check_factor_loading(self):
-        factor_bdf = (self.factor_df != 0)
+        factor_bdf = self.factor_df.ne(0)
         assert (factor_bdf.sum(axis=1) == 1).all(), \
             "Zero or more than one factor per variable, factor models are not pure"
         used_factor_bse = (factor_bdf.sum(axis=0) >= 1)
@@ -291,12 +304,27 @@ class InfoToDF:
         R code works better if unstructured variables are before the structured ones
         Used for merged_info2df
         """
+        # New idea: sort wrt to Factor size; in theory, this should already be enough
+        tmp_factor_df = self.type2factor['factor_model_df'].factor_df
+        # factor2size = \
+        #     tmp_factor_df.groupby('Factor').size().sort_values(ascending=True)
+
+        tmp_factor_df['Size'] = tmp_factor_df['Factor'].map(
+            self.type2factor['factor_model_df'].get_variable_count_per_factor()
+        )
+        self.type2factor['factor_model_df'].factor_df = \
+            tmp_factor_df.set_index('Size', append=True).sort_index(
+                level=['Size', 'Variable']
+            ).reset_index(level='Size', drop=True)
+
         # TODO only works with factorInfo of FactorModelDF type
         unstructured_variable_index, structured_variable_index = \
             self.type2factor['factor_model_df'].get_unstructured_and_structured_variables()
         unstructured_variable_first_index = unstructured_variable_index.append(structured_variable_index)
+        unstructured_variable_first_index.name = self.type2factor['factor_model_df'].factor_df.index.name
         self.type2factor['factor_model_df'].factor_df = self.type2factor['factor_model_df'].factor_df.loc[
             unstructured_variable_first_index].copy()  # put factor-unstructured variables first
+        # self.type2factor['factor_model_df'].factor_df.index.name = 'Variable'
         # not needed - columns of data_df sorted as rows of factor_model_df
         self.data_df = self.data_df.loc[:, unstructured_variable_first_index].copy()
 
@@ -336,12 +364,12 @@ class InfoToDF:
         assert (self.type2factor['factor_model_df'].factor_df.loc[
                     self.type2factor['factor_model_df'].factor_df['Factor'].isin(
                         unstructured_variable_index), 'Factor'].tolist()
-                == unstructured_variable_index.tolist()), 'Unstructured variable are also factors of structured variables'
+                == unstructured_variable_index.tolist()), 'Unstructured variables are also factors of structured variables'
 
         assert (self.type2factor['factor_model_df'].factor_df.loc[unstructured_variable_index, 'Loading'] == 1).all(), \
             'Some unstructured variables do not have Loading = 1'
-        assert (self.type2factor['factor_model_df'].factor_df.loc[unstructured_variable_index, 'Factor'].tolist()
-                == unstructured_variable_index.tolist()), "Some unstructured variables are not factors of themselves"
+        assert (set(self.type2factor['factor_model_df'].factor_df.loc[unstructured_variable_index, 'Factor'].tolist())
+                == set(unstructured_variable_index.tolist())), "Some unstructured variables are not factors of themselves"
 
         #         assert merged_info2df['factor_loading_df'].factor_df.loc[unstructured_variable_index, unstructured_variable_index]
 
@@ -357,8 +385,21 @@ class InfoToDF:
         assert not structured_variable_index.isin(self.type2factor['factor_model_df'].factor_df['Factor']).any(), \
             "Some factors are also variables"
         # TODO TEST maybe check that all proper factor have at least 2 associated variables
-        assert (self.type2factor['factor_model_df'].factor_df.loc[structured_variable_index, 'Factor'].value_counts() > 1).all(), \
-            "Some factors of structured variables have just one structured variable associated. Please check that factors with just one structured variable associated have the same name of the variable."
+        assert (self.type2factor['factor_model_df'].factor_df.loc[
+                    structured_variable_index, 'Factor'].value_counts() > 1).all(), \
+            "Some factors of structured variables have just one structured variable associated. Please check that factors with just one variable associated have the same name of the variable."
+
+        assert set(self.type2factor['factor_model_df'].get_variable_count_per_factor().index) == set(
+            self.type2factor['factor_loading_df'].factor_df.columns), \
+            "Factor loading columns are different from the factor models"
+
+        # Not sure if we should check that singleton factors are variable.
+        factor2count_se = self.type2factor['factor_loading_df'].factor_df.ne(0).sum()  #.sort_values().index
+        singleton_factor_ls = factor2count_se[factor2count_se.eq(1)].index.tolist()
+        assert set(singleton_factor_ls).issubset(self.type2factor['factor_model_df'].factor_df.index), \
+            "Some factors with just one variable associated are not variables themselves"
+        # assert self.type2factor['factor_model_df'].factor_df.loc[singleton_factor_ls, 'Factor'].isin(self.type2factor['factor_model_df'].factor_df.index), \
+
 
 
 class ListInfoToDF:
