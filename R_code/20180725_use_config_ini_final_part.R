@@ -193,9 +193,16 @@ pc_parameters_ls <- list(
 )
 
 # TODO maybe in the future we require to have at least causal_discovery_algorithm_run_n algorithm, so we replace this for with a while (iRun_n <=  causal_discovery_algorithm_run_n)
-# This loop outputs: run2suffstat_ls, run2pcalgo_ls, run2pcalgo_bad_ls
-# We could turn the loop core into a function taking as input run2suffstat_ls, run2pcalgo_ls, run2pcalgo_bad_ls AND other stuff adn outputing I think only those 3
-# original_bootstrap_n, fileConn, data_df
+# This loop outputs: run2suffstat_ls, run2pcalgo_ls, run2pcalgo_bad_ls, bootstrap_random_seed_n
+# We could turn the loop core into a function taking as input 
+# run2suffstat_ls, run2pcalgo_ls, run2pcalgo_bad_ls, gibbs_sampling_n, factor_loading_df
+# AND causal_discovery_algorithm_run_n
+# AND
+# no_perform_bootstrap_b, fileConn, data_df, bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n
+# AND
+# gibbs_sampling_n, odens_n, first_random_seed, random_seed_update_parameter,
+# AND other stuff adn outputing I think those 3 and
+# original_bootstrap_n, fileConn, bootstrap_random_seed_n
 output_path_suffstat <- config$get(option = "output_path_suffstat", fallback = "", section = "output_paths")
 for (iRun_n in 1:causal_discovery_algorithm_run_n) {
   ## 2.1 Bootstrap
@@ -571,7 +578,7 @@ first_title <- main_plot_title_str  # 'Causal graph with all edges'
 if (no_perform_bootstrap_b) {
   # TODO - output to var, convert and save it
   plot(run2pcalgo_ls[[1]], main = first_title)  # if
-  } else {
+} else {
   # TODO - output to var, convert to bn <- strength (if needed), convert to DOT format or other and save to path specified in INI
   graph_nel <- strength.plot(x = avg_bn_obj, strength = bn_strength_obj, 
     # threshold = attributes(bn_strength_obj)$threshold, # No need to specify the thershold
