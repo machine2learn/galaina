@@ -1,7 +1,8 @@
 # Galaina
-
+Galaina is a platform to read data, find probabilistic causal associations, and generate a diagram that shows the causal relationships among the data variables or factors (i.e. group of variables expressing the same hypothetical constructs).
+ 
 ## Description
-Within the course of the EU project Aggressotype, Machine2Learn BV developed a platform called Galaina to extract causal relationships from biological and medical databases that are in tabular format. Using the causal relationships from Galaina, we show that it is possible to derive subtypes, i.e., meaningful grouping of variables (here also called features) present in those databases. Galaina is a platform to read data, find causal associations, and generate a diagram that shows the causal relationships between features and subtypes. 
+Within the course of the EU project Aggressotype, Machine2Learn BV developed a platform called Galaina to extract probabilistic causal relationships from biological and medical databases that are in tabular format. Using the causal relationships extracted by Galaina, we could identify the variable subtypes, i.e., meaningful grouping of variables (here also called features) present in those databases.
 
 ## Installation
 
