@@ -105,7 +105,7 @@ Each dataset must be provided as CSV files where:
 
 We refer to this example dataset as **Dataset_01**
 
-| *Identifier* | *Variable1_01* | *Variable1_02* | *Variable1_02* | ... |
+| *Identifier* | *Variable1_01* | *Variable1_02* | *Variable1_03* | ... |
 | ------------ | -------------- | -------------- | -------------- | --- |
 | id01         | 45             | 0              | 1              | ... |
 | id02         | 0.5            | 42             | 0              | ... |
@@ -130,7 +130,7 @@ Together with Dataset_01, we give as input two more datasets; the value of `Vari
 
 **Dataset_03**
 
-| *Identifier* | *Variable3_01* | *Variable3_02* | *Variable3_02* | ... |
+| *Identifier* | *Variable3_01* | *Variable3_02* | *Variable3_03* | ... |
 | ------------ | -------------- | -------------- | -------------- | --- |
 | id01         | 75             | 3              | 3              | ... |
 | id02         | 3.5            |                | 0.3            | ... |
@@ -139,7 +139,7 @@ Together with Dataset_01, we give as input two more datasets; the value of `Vari
 
 Then Galaina will process the resulting dataset, made only by `id02` and `id04`:
 
-| *Identifier* | *Variable1_01* | *Variable1_02* | *Variable1_02* | *Variable2_01* | *Variable2_02* | *Variable2_03* | *Variable3_01* | *Variable3_02* | *Variable3_03* | ... |
+| *Identifier* | *Variable1_01* | *Variable1_02* | *Variable1_03* | *Variable2_01* | *Variable2_02* | *Variable2_03* | *Variable3_01* | *Variable3_02* | *Variable3_03* | ... |
 | ------------ | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- | -------------- | --- |
 | id02         | 0.5            | 42             | 0              | 4.5            | 442            | 4              | 3.5            |                | 0.3            | ... |
 | id04         | 48             | 10             | 5.25           | 448            | 40             | 9.25           | 38             | 30             | 3.25           | ... |
