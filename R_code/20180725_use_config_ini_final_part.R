@@ -37,10 +37,15 @@ if (sys.nframe() == 0) {
     sink(file = fileConn, append = TRUE, type = 'message')  # future: unset type and use sink for managing output. Modify print_and_append_to_log because it could become redundant
   }
 
-
-  args <- commandArgs(trailingOnly = TRUE)  # uncomment for taking config path argument from Python
+  # Read input config file and get all the arguments from that
+  args <- commandArgs(trailingOnly = TRUE)  # taking config path argument from Python
   config <- ConfigParser$new(Sys.getenv(), optionxform = identity)
   config$read(filepath = args[1])
+  # IDEA: make this piece of code (till loop) a function:
+  # Input: (config file, messaging_b, optional data_df, optional factor_loading_df)
+  # Processing: initialize stuff
+  # Output: pc_parameters_ls, infer_copula_param_ls, bootstrap_param_ls
+  # BUT we need a special script for testing to specify input
 
   # args <- c("/Volumes/encrypted_data_sparse/demo_output/test_background_1000_bootstrap_3_merged_data.csv",
   #           "/Volumes/encrypted_data_sparse/demo_output/test_background_1000_bootstrap_3_merged_factor_loading_matrix.csv",
@@ -106,6 +111,7 @@ if (sys.nframe() == 0) {
 
   # perform_bootstrap_b <- (original_bootstrap_n >= 1)
   no_perform_bootstrap_b <- (original_bootstrap_n == 0)
+  perform_bootstrap_b <- !no_perform_bootstrap_b
   # if (perform_bootstrap_b) {
   bootstrap_first_random_seed_n <- as.integer(
     config$getfloat(option = "bootstrap_first_random_seed_n", section = "edge_weight_algorithm")
@@ -136,10 +142,6 @@ if (sys.nframe() == 0) {
 
   causal_discovery_observation_n <- as.integer(config$getfloat(option = "causal_discovery_observation_n", section = "pc_algorithm"))
 
-  odens_n <- 1  # save only every odens_n
-  #
-  factor_n <- length(factor_names)
-
   # if (original_bootstrap_n >= 1) {
   #   bootstrap_random_seed_n <- bootstrap_first_random_seed_n
   # }
@@ -152,8 +154,8 @@ if (sys.nframe() == 0) {
   run2pcalgo_ls <- vector(mode = "list", length = causal_discovery_algorithm_run_n)
   run2pcalgo_bad_ls <- run2pcalgo_ls  # Stores the ones we removed
   run2suffstat_ls <- run2pcalgo_ls
+
   # bootstrapped_graphnel_list <- vector(mode = "list", length = causal_discovery_algorithm_run_n)
-  throw_away_odens_n <- floor(gibbs_burn_in_n / odens_n)
 
   # TODO if need this parameter in the future, fixedGaps and fixedEdges will be logical matrices
   pc_fixedGaps <- config$get(option = "fixedGaps", section = "pc_algorithm")
@@ -167,6 +169,10 @@ if (sys.nframe() == 0) {
 
   # cat(config$data$pc_algorithm$indepTest, "\n")
   indep_test_parameter_str <- config$get(option = "indepTest", section = "pc_algorithm")
+  output_path_suffstat <- config$get(option = "output_path_suffstat", fallback = "", section = "output_paths")
+
+  output_path_pc_algo_obj <- config$get(option = "output_path_pc_algo_obj", fallback = "", section = "output_paths")
+
   pc_parameters_ls <- list(
     suffStat = list(),
     indepTest = get(indep_test_parameter_str),  # now it pastes here the code of the function
@@ -203,7 +209,9 @@ if (sys.nframe() == 0) {
   # gibbs_sampling_n, odens_n, first_random_seed, random_seed_update_parameter,
   # AND other stuff adn outputing I think those 3 and
   # original_bootstrap_n, fileConn, bootstrap_random_seed_n
-  output_path_suffstat <- config$get(option = "output_path_suffstat", fallback = "", section = "output_paths")
+
+  odens_n <- 1  # save only every odens_n
+  #
 
   infer_copula_param_ls <- list(
     Y = list(NULL),
@@ -220,27 +228,56 @@ if (sys.nframe() == 0) {
     infer_copula_param_ls[['fileConn']] <- fileConn
   }
 
+  factor_n <- length(factor_names)
+  throw_away_odens_n <- floor(gibbs_burn_in_n / odens_n)
+
+  # bootstrap_iterarion_param_ls <- list(
+  #
+  # )
   for (iRun_n in 1:causal_discovery_algorithm_run_n) {
+  #   tmp_out_ls <- infer_covariance_and_graph(
+  #     data_df, factor_n, throw_away_odens_n,
+  #     infer_copula_param_ls,
+  #     pc_parameters_ls,
+  #     output_path_pc_algo_obj,
+  #     run2pcalgo_ls,
+  #     run2pcalgo_bad_ls,
+  #     run2suffstat_ls,
+  #     causal_discovery_observation_n,
+  #     iRun_n,
+  #     causal_discovery_algorithm_run_n,
+  #     perform_bootstrap_b,
+  #     bootstrap_random_seed_n,
+  #     bootstrap_random_seed_update_parameter_n,
+  #     fileConn
+  #   )
+  #   bootstrap_random_seed_n <- tmp_out_ls[['bootstrap_random_seed_n']]
+  #   run2pcalgo_ls <- tmp_out_ls[['run2pcalgo_ls']]
+  #   run2pcalgo_bad_ls <- tmp_out_ls[['run2pcalgo_bad_ls']]
+  #   run2suffstat_ls <- tmp_out_ls[['run2suffstat_ls']]
+  # }
+  # run2pcalgo_ls <- tmp_out_ls[['run2pcalgo_ls']]
+  # run2pcalgo_bad_ls <- tmp_out_ls[['run2pcalgo_bad_ls']]
+  # run2suffstat_ls <- tmp_out_ls[['run2suffstat_ls']]
+
     ## 2.1 Bootstrap
+    # Input:
+    # - iRun_n, causal_discovery_algorithm_run_n, no_perform_bootstrap_b, bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n,
+    # - data_df,
+    # - infer_copula_param_ls, pc_parameters_ls, identity
+    # - throw_away_odens_n, factor_n, causal_discovery_observation_n,
+    # - output_path_pc_algo_obj
+    # - (fileConn),
+    # Output:
+    # - bootstrap_random_seed_n
+    # return(list(run2suffstat_ls = run2suffstat_ls, run2pcalgo_ls = run2pcalgo_ls, run2pcalgo_bad_ls = run2pcalgo_bad_ls))
+
     if (no_perform_bootstrap_b) {
       # cat("No bootstrap performed \n")
       print_and_append_to_log(c("No bootstrap performed \n"), fileConn)
       tmp_run_data_df <- data_df
     } else {
-      # cat("No bootstrap performed \n")
-      # cat("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n")
-      #
       set.seed(bootstrap_random_seed_n) # for testing set seed to
-      # if (perform_bootstrap_b) {
-      #     iteration_tag_str <- "bootstrap iteration"
-      #     iteration_rows_id <- sample(nrow(data_df), replace = TRUE)
-      #     # tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
-      # } else {
-      #     iteration_tag_str <- "iteration without bootstrap"
-      #     iteration_rows_id <- seq(nrow(data_df))
-      #     # tmp_run_data_df <- data_df  # no bootstrap
-      # }
-      # tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
       print_and_append_to_log(c("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
       print_and_append_to_log(c("Random seed bootstrap sample:", bootstrap_random_seed_n, "\n"), fileConn)
       iteration_rows_id <- sample(nrow(data_df), replace = TRUE)
@@ -253,53 +290,18 @@ if (sys.nframe() == 0) {
       #   na=""
       # )
     }
+
     ## 2.2 Perform inference - first seed of gibbs sampling is always the same, but data changes
     print_and_append_to_log("Perform inference\n", fileConn)
-
-    infer_copula_param_ls[['Y']] <- data.matrix(tmp_run_data_df)
-    infer_copula_param_ls[['run_id']] <- iRun_n
-    # infer_copula_param_ls <- list(
-    #   Y = data.matrix(tmp_run_data_df),
-    #   Lambda = data.matrix(factor_loading_df),
-    #   nsamp = gibbs_sampling_n,
-    #   odens = odens_n,  # Store each Gibbs sampling output
-    #   first_random_seed = gibbs_first_random_seed_n,
-    #   random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
-    #   output_intermediate = output_path_suffstat,
-    #   run_id = iRun_n,  # save intermediate Sigma.psamp for each bootstrap/run
-    #   fileConn = fileConn
-    # )
+    tmp_infer_copula_param_ls <- infer_copula_param_ls
+    tmp_infer_copula_param_ls[['Y']] <- data.matrix(tmp_run_data_df)
+    tmp_infer_copula_param_ls[['run_id']] <- iRun_n
     if (no_perform_bootstrap_b) {  # Used for testing, but in theory the repeat would be enough
-      tmp_cop_fac_obj <- do.call("my_inferCopulaFactorModel", infer_copula_param_ls)
-      # tmp_cop_fac_obj <- my_inferCopulaFactorModel(
-      #   # Y_df = tmp_run_data_df,
-      #   Y = data.matrix(tmp_run_data_df),
-      #   Lambda = data.matrix(factor_loading_df),
-      #   nsamp = gibbs_sampling_n,
-      #   odens = odens_n,  # Store each Gibbs sampling output
-      #   first_random_seed = gibbs_first_random_seed_n,
-      #   random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
-      #   output_intermediate = output_path_suffstat,
-      #   run_id = iRun_n,  # save intermediate Sigma.psamp for each bootstrap/run
-      #   fileConn = fileConn
-      # )   # , tol = 1e-22)
+      tmp_cop_fac_obj <- do.call("my_inferCopulaFactorModel", tmp_infer_copula_param_ls)
     } else {
       repeat {
-        # tmp_cop_fac_obj <- do.call("my_inferCopulaFactorModel", infer_copula_param_ls)
         tmp_cop_fac_obj <- tryCatch(
-          tmp_cop_fac_obj <- do.call("my_inferCopulaFactorModel", infer_copula_param_ls),
-          # my_inferCopulaFactorModel(
-          #   # Y_df = tmp_run_data_df,
-          #   Y = data.matrix(tmp_run_data_df),
-          #   Lambda = data.matrix(factor_loading_df),
-          #   nsamp = gibbs_sampling_n,
-          #   odens = odens_n,  # Store each Gibbs sampling output
-          #   first_random_seed = gibbs_first_random_seed_n,
-          #   random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
-          #   output_intermediate = output_path_suffstat,
-          #   run_id = iRun_n,  # save intermediate Sigma.psamp for each bootstrap/run
-          #   fileConn = fileConn
-          # ),   # , tol = 1e-22)
+          tmp_cop_fac_obj <- do.call("my_inferCopulaFactorModel", tmp_infer_copula_param_ls),
           error = identity
         )
         if (!is(tmp_cop_fac_obj, "error") || no_perform_bootstrap_b) {
@@ -335,7 +337,7 @@ if (sys.nframe() == 0) {
     # Extract samples of the correlation matrix over latent variables, ignoring the first samples (burn-in)
     # C_samples <- tmp_cop_fac_obj$Sigma.psamp[1:factor_n, 1:factor_n, (gibbs_burn_in_n + 1) : gibbs_sampling_n]
     if (throw_away_odens_n < 1) {
-      C_samples <- tmp_cop_fac_obj$Sigma.psamp[1:factor_n, 1:factor_n,]
+      C_samples <- tmp_cop_fac_obj$Sigma.psamp[1:factor_n, 1:factor_n, ]
     } else {
       C_samples <- tmp_cop_fac_obj$Sigma.psamp[1:factor_n, 1:factor_n, -(1:throw_away_odens_n)]
     }
@@ -360,42 +362,7 @@ if (sys.nframe() == 0) {
     #### 2.3 Causal discovery ####
     # MEMO we could directly store the bnlearn version
     ## call the order independent version of the standard PC algorithm
-    # run2pcalgo_ls[[iRun_n]] <- pc(
-    # TODO take those all from the INI
 
-    # tmp_graph_cfpc <- pc(
-    #   suffStat = list(
-    #     C = C,
-    #     n = causal_discovery_observation_n  # mean(C_ess[upper.tri(C_ess)])
-    #   ),
-    #   indepTest = as.name(indep_test_parameter_str),
-    #   # indepTest = config$get(option = "indepTest", section = "pc_algorithm"),
-    #   alpha =  config$getfloat(option = "alpha", section = "pc_algorithm"),
-    #   labels = factor_names,
-    #   numCores =  as.integer(config$getfloat(option = "numCores", section = "pc_algorithm")),
-    #   verbose = config$getboolean(option = "verbose", section = "pc_algorithm"),
-    #   fixedGaps = pc_fixedGaps,
-    #   fixedEdges = pc_fixedEdges,
-    #   NAdelete = config$getboolean(option = "NAdelete", section = "pc_algorithm"),
-    #   m.max = config$get(option = "m.max", section = "pc_algorithm"),
-    #   u2pd = config$get(option = "u2pd", section = "pc_algorithm"),
-    #   # u2pd = "relaxed",  # impled by solve.confl = TRUE
-    #   skel.method = config$get(option = "skel.method", section = "pc_algorithm"),
-    #   conservative = config$getboolean(option = "conservative", section = "pc_algorithm"),
-    #   # conservative = TRUE,
-    #   # Choose either conservative PC or majority rule PC!
-    #   maj.rule = config$getboolean(option = "maj.rule", section = "pc_algorithm"),
-    #   # maj.rule = TRUE,
-    #   solve.confl = config$getboolean(option = "solve.confl", section = "pc_algorithm")
-    #   # solve.confl = TRUE
-    # )
-
-    # 1. make a R list of parameters before loop
-    # 2. forall iteration
-    #     a. update suffStat
-    #         pc_parameter_ls[['suffStat']] <- list(C = C, n = causal_discovery_observation_n)
-    #     b. tmp_graph_cfpc <- do.call("pc", pc_parameter_ls)
-    # old_pc_parameters_ls <- pc_parameters_ls
     tmp_suffstat_ls <- list(C = C, n = tmp_causal_discovery_observation_n)
     run2suffstat_ls[[iRun_n]] <- tmp_suffstat_ls
     # For parallelization, we could just make a function returning tmp_suffstat_ls and store it into run2suffstat_ls.
@@ -403,58 +370,22 @@ if (sys.nframe() == 0) {
     # - run2pcalgo_ls
     # - run2pcalgo_bad_ls
 
-    pc_parameters_ls[['suffStat']] <- tmp_suffstat_ls
+    tmp_pc_parameters_ls <- pc_parameters_ls
+    tmp_pc_parameters_ls[['suffStat']] <- tmp_suffstat_ls
     # stopifnot(!identical(old_pc_parameters_ls$suffStat, pc_parameters_ls$suffStat))
-    tmp_graph_cfpc <- do.call("pc", pc_parameters_ls)
+    tmp_graph_cfpc <- do.call("pc", tmp_pc_parameters_ls)
 
-    # tmp_graph_cfpc <- do.call("pc",
-    #   list(
-    #     suffStat = list(
-    #       C = C,
-    #       n = causal_discovery_observation_n  # mean(C_ess[upper.tri(C_ess)])
-    #     ),
-    #     indepTest = get(indep_test_parameter_str),  # now it pastes here the code of the function
-    #     # indep_test_parameter_str, #<- indep_test_parameter_str[[1]], # substitute(indep_test_parameter_str),
-    #     # indepTest = config$get(option = "indepTest", section = "pc_algorithm"),
-    #     alpha =  config$getfloat(option = "alpha", section = "pc_algorithm"),
-    #     labels = factor_names,
-    #     numCores =  as.integer(config$getfloat(option = "numCores", section = "pc_algorithm")),
-    #     verbose = config$getboolean(option = "verbose", section = "pc_algorithm"),
-    #     fixedGaps = pc_fixedGaps,
-    #     fixedEdges = pc_fixedEdges,
-    #     NAdelete = config$getboolean(option = "NAdelete", section = "pc_algorithm"),
-    #     m.max = config$get(option = "m.max", section = "pc_algorithm"),
-    #     u2pd = config$get(option = "u2pd", section = "pc_algorithm"),
-    #     # u2pd = "relaxed",  # impled by solve.confl = TRUE
-    #     skel.method = config$get(option = "skel.method", section = "pc_algorithm"),
-    #     conservative = config$getboolean(option = "conservative", section = "pc_algorithm"),
-    #     # conservative = TRUE,
-    #     # Choose either conservative PC or majority rule PC!
-    #     maj.rule = config$getboolean(option = "maj.rule", section = "pc_algorithm"),
-    #     # maj.rule = TRUE,
-    #     solve.confl = config$getboolean(option = "solve.confl", section = "pc_algorithm")
-    #     # solve.confl = TRUE
-    #   )
-    # )
-
-    # random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter_n)  # FG update random seed
-    #
     # WARNING we might have to turn off the edge assignment part
 
-    # tmp_amat_cpdag <- as(tmp_graph_cfpc, "amat")
-    # with_bgk_amat_cpdag <- addBgKnowledge(gInput = tmp_amat_cpdag, checkInput = FALSE)  # apply orientation rules of Meek 1995
     # DEBUG begin
-    # cat(is.matrix(tmp_amat_cpdag), "\n")
-
-    # DEBUG begin
-    # Restrict to arc that can be enforced on this graph: the must correspond to egdes that are undirected
+    # Restrict to arc that can be enforced on this graph: they must correspond to egdes that are undirected
     # Check if edge is there
     tmp_blacklist_arcs_absent_b <- TRUE
     if (file.exists(input_path_directed_edges_blacklist)) {
       tmp_amat_cpdag <- as(tmp_graph_cfpc, "amat")
-      # DAG/CPDAG (format "cpdag"). Directed egde {from} --> {to} is present <=> amat[{from}, {to}] == 0  AND amat[{to}, {from}] == 1
+      # DAG/CPDAG (format "cpdag"). Directed egde {from} --> {to} is present <=> amat[{from}, {to}] == 0 AND amat[{to}, {from}] == 1
       tmp_cpdag_blacklist_arcs_present_bv <- (tmp_amat_cpdag[dir_arc_blacklist_mat] == 0) & (tmp_amat_cpdag[dir_arc_blacklist_mat[, rev(colnames(dir_arc_blacklist_mat))]] == 1)
-      # MAG/DAG (format "pag"). Directed egde {from} --> {to} is present <=> amat[{from}, {to}] == 2  AND amat[{to}, {from}] == 3
+      # MAG/DAG (format "pag"). Directed egde {from} --> {to} is present <=> amat[{from}, {to}] == 2 AND amat[{to}, {from}] == 3
       tmp_pag_blacklist_arcs_present_bv <- (tmp_amat_cpdag[dir_arc_blacklist_mat] == 2) & (tmp_amat_cpdag[dir_arc_blacklist_mat[, rev(colnames(dir_arc_blacklist_mat))]] == 3)
       tmp_blacklist_arcs_present_bv <- (tmp_cpdag_blacklist_arcs_present_bv | tmp_pag_blacklist_arcs_present_bv)
       # tmp_blacklist_arcs_present_bv <- (tmp_amat_cpdag[dir_arc_blacklist_mat] == 1) & (tmp_amat_cpdag[dir_arc_blacklist_mat[, rev(colnames(dir_arc_blacklist_mat))]] == 0)
@@ -482,30 +413,30 @@ if (sys.nframe() == 0) {
     # }
     # bootstrapped_graphnel_list[[iRun_n]] <- as(t(as(with_bgk_amat_cpdag, "matrix")), "graphNEL")  # strange we need to specify matrix
 
-    # In theory we would need to convert to grphNEL only if we add background knowledge, because as.bn would work with both
+    # In theory we would need to convert to graphNEL only if we add background knowledge, because as.bn would work with both
     # bootstrapped_graphnel_list[[iRun_n]] <- as(t(with_bgk_amat_cpdag), "graphNEL")
     if (tmp_blacklist_arcs_absent_b) {
       run2pcalgo_ls[[iRun_n]] <- tmp_graph_cfpc
     } else {
       run2pcalgo_bad_ls[[iRun_n]] <- tmp_graph_cfpc
-      # cat("Current graph removed because it contained", sum(tmp_blacklist_arcs_present_bv), "blacklisted directed edges", "\n")
       print_and_append_to_log(
         c("Current graph removed because it contained", sum(tmp_blacklist_arcs_present_bv), "blacklisted directed edges", "\n"),
         fileConn
       )
       stopifnot(sum(tmp_blacklist_arcs_present_bv) > 0)
-      # cat(dir_arc_blacklist_mat[tmp_blacklist_arcs_present_bv])
       print_and_append_to_log(c(dir_arc_blacklist_mat[tmp_blacklist_arcs_present_bv]), fileConn)
     }
     # saveRDS(graph_cfpc, file = args[8])
     cat('\n\n')
     # Save temporary output
-    output_path_pc_algo_obj <- config$get(option = "output_path_pc_algo_obj", fallback = "", section = "output_paths")
     if (!stri_isempty(output_path_pc_algo_obj)) {
-      tmp_out_path <- paste0(file_path_sans_ext(output_path_pc_algo_obj), '_', iRun_n, '.', file_ext(output_path_pc_algo_obj))
+      tmp_out_path <- paste0(
+        file_path_sans_ext(output_path_pc_algo_obj), '_', iRun_n, '.', file_ext(output_path_pc_algo_obj)
+      )
       saveRDS(run2pcalgo_ls, file = tmp_out_path)
     }
   }
+  # return(list(run2suffstat_ls = run2suffstat_ls, run2pcalgo_ls = run2pcalgo_ls, run2pcalgo_bad_ls = run2pcalgo_bad_ls))
 
   cat('\n')
 
@@ -542,7 +473,9 @@ if (sys.nframe() == 0) {
     )
     avg_bn_obj <- averaged.network(strength = bn_strength_obj, nodes = factor_names)  # it automatically gets the thresold from bn_strength_obj
 
-    path_to_bn_strength_obj <- config$get(option = "output_path_bn_strength_obj", fallback = "", section = "output_paths")
+    path_to_bn_strength_obj <- config$get(
+      option = "output_path_bn_strength_obj", fallback = "", section = "output_paths"
+    )
     if (!stri_isempty(path_to_bn_strength_obj)) {
       saveRDS(bn_strength_obj, file = path_to_bn_strength_obj)
       # Save to CSV files (thresholded and not thresholded)
@@ -562,8 +495,7 @@ if (sys.nframe() == 0) {
     }
 
     path_to_avg_bn_obj <- config$get(
-      option = "output_path_avg_bn_obj",
-      fallback = "", section = "output_paths"
+      option = "output_path_avg_bn_obj", fallback = "", section = "output_paths"
     )
     if (!stri_isempty(path_to_avg_bn_obj)) {
       saveRDS(avg_bn_obj, file = path_to_avg_bn_obj)
@@ -665,7 +597,7 @@ if (sys.nframe() == 0) {
     # https://github.com/Bioconductor/graph/blob/master/R/TODOT.R
   }
 
-  # Used when we were enforcing balacklist at the end
+  # FG Used when we were enforcing balacklist at the end
   # with_blacklist_avg_bn_obj <- avg_bn_obj
   # with_blacklist_bn_strength_obj <- bn_strength_obj
   # #
