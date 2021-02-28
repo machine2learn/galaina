@@ -2,7 +2,9 @@
 # source(here("R_code/20180725_use_config_ini_final_part.R"))  # Load print_and_append_to_log
 print_and_append_to_log <- function(tmp_log_str_v, fileConn) {
   cat(tmp_log_str_v)
-  write(paste(tmp_log_str_v, collapse = " "), file = fileConn, append = TRUE)
+  if (!is.null(fileConn)) {
+    write(paste(tmp_log_str_v, collapse = " "), file = fileConn, append = TRUE)
+  }
 }
 
 update_random_seed <- function(random_seed, parameter = 10) {
@@ -13,7 +15,21 @@ version_at_least <- function(pkg, than) {
   as.logical((compareVersion(as.character(packageVersion(pkg)), than) >= 0))
 }
 
+stopGeneric <- function(condition_b, fileConn, msg) {
+  if (!(condition_b)) {
+    # if (!is.null(fileConn)) {
+    print_and_append_to_log(c(msg, "\n"), fileConn)
+    # }
+    stop(msg)
+  }
+}
 
+showData <- function(focus_v, fileConn, msg) {
+  print_and_append_to_log(c(msg, "\n", sep = ""), fileConn)
+  print_and_append_to_log(c(capture.output(focus_v), "\n", sep = "\n"), fileConn)
+}
+# source("shared_functions.R")
+# FG Keep these two here
 # Y_is_finite <- all(is.finite(Y))
 # X_is_finite <- all(is.finite(X))
 this_should_happen <- function(Y, X) {
@@ -27,15 +43,10 @@ this_should_happen <- function(Y, X) {
 stopifXnotfinite <- function(Y, X, fileConn, msg) {
   result <- this_should_happen(Y, X)
   if (!(result)) {
+    # if (!is.null(fileConn)) {
     print_and_append_to_log(c("X is not finite", "\n"), fileConn)
     print_and_append_to_log(c(msg, "\n"), fileConn)
-    stopifnot(result)
-  }
-}
-
-stopGeneric <- function(condition_b, fileConn, msg) {
-  if (!(condition_b)) {
-    print_and_append_to_log(c(msg, "\n"), fileConn)
+    # }
     stop(msg)
   }
 }
@@ -53,6 +64,7 @@ stopGeneric <- function(condition_b, fileConn, msg) {
 
 
 my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NULL, nsamp = 1000,
+                                      # rand.start = F, 
                                       odens = max(1, round(nsamp / 1000)), impute = any(is.na(Y)),
                                       plugin.threshold = 20,
                                       plugin.marginal = (apply(Y, 2, function(x) {
@@ -63,7 +75,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
                                       random_seed_update_parameter = 10,
                                       output_intermediate = "",
                                       run_id = 0,
-                                      fileConn = file("output.txt", 'a')
+                                      fileConn = NULL  # file("output.txt", 'a')
 ) {
   #
   # This is the main function to perform inference for Gaussian copula factor models.
@@ -81,6 +93,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   # Return: a list that contains samples of the correlation matrix over all variables (factors + observed variables)
   #   
 
+  print_and_append_to_log(c("Tollerance: ", tol, "\n"), fileConn)  # FG
 
   # I stores in C.psamp only some of the Gibbs sampled Correlation matrices. 
   # However, in this way to throw-away the burn-in samples from the C.psamp given as output by the function we must throw away the first floor((throw_away_n + 1)/odens_n)
@@ -136,7 +149,6 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   } else {
     G2 <- t(Lambda)
   }
-
   G3 <- matrix(0, nrow = p - k1, ncol = p - k1)
   G <- rbind(cbind(G1, G2), cbind(t(G2), G3))
   G[lower.tri(G)] <- 0
@@ -205,16 +217,23 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   all_var_in_X_col_index <- (1:X_col_n)[-poly_factor_index]
   # FG temporary check
   stopifXnotfinite(Y, X, fileConn, '1st')
-  S <- cov(X)  # Initialize the covariance matrix
-  if (n < p) {
-    S <- S + S0  # New wrt to Cui code: add scale matrix to avoid S be singular FG
-  }  # FG
+  S <- cov(X) + S0
+  # S <- cov(X)  # Initialize the covariance matrix
+  # if (n < p) {
+  #   S <- S + S0  # New wrt to Cui code: add scale matrix to avoid S be singular FG
+  # }  # FG
+  # LAtest Ruifei version
+  # if (rand.start){
+  #   S <- solve(rwish(S0*n0, n0 + 1))
+  # }else{
+  #   S <- cov(X) + S0
+  # }
   matrix_not_singular_b <- all(eigen(data.matrix(S))$values != 0)
   stopGeneric(matrix_not_singular_b, fileConn, 'Initialized covariance matrix is singular')
 
   ####
   Y.pmean <- Y
-  Z.pmean <- Z2
+  # Z.pmean <- Z2   # FG this is not stored anymore
   if (impute) {
     Y.pmean <- matrix(0, nrow = n, ncol = p)
   }
@@ -245,21 +264,32 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
     # }
     ## sample Z1 (=eta1)
     # FG these are the factors with single indicator (dummy factors), that are identical to the unstructured variables
-    print_and_append_to_log(c("Start Gibbs sampling", "\n"), fileConn)
-    if (exist_singleton_factor_b) {
-      print_and_append_to_log(c("Start singleton factor sampling", "\n"), fileConn)
-    }
+    # print_and_append_to_log(c("Start Gibbs sampling", "\n"), fileConn)
+    # if (exist_singleton_factor_b) {
+    #   print_and_append_to_log(c("Start singleton factor sampling", "\n"), fileConn)
+    # }
     for (j_s_factor in singleton_factor_index) {
       # if (!(j %in% ind.cat)) {
+      # FG Update Sjc, sdj <- n, muj
       tmp_other_factor_index <- (1:k)[-j_s_factor]  # FG k =  k1 + k2 = nr factors. So these are all the factor numeric id except j_s_factor
-      Sjc <- S[j_s_factor, tmp_other_factor_index] %*% solve(S[tmp_other_factor_index, tmp_other_factor_index], tol = tol)  # New wrt to Cui code: allow tollerance
+      tryCatch(
+        {
+          Sjc <- S[j_s_factor, tmp_other_factor_index] %*% solve(S[tmp_other_factor_index, tmp_other_factor_index], tol = tol)  # New wrt to Cui code: allow tollerance
+        },
+        error = function (cond) {
+          message(cond)
+          stop("Sjc computation failed")
+        }
+      )
       # compute_sdj <- function(S, j_s_factor, Sjc, tmp_other_factor_index) {
       #   sqrt(S[j_s_factor, j_s_factor] - Sjc %*% S[tmp_other_factor_index, j_s_factor])
       # }
       sdj_n <- sqrt(S[j_s_factor, j_s_factor] - Sjc %*% S[tmp_other_factor_index, j_s_factor])
       muj <- X[, tmp_other_factor_index] %*% t(Sjc)
+      # FG simply avoid computing it at every iteration - Could make a binary matrix and 2 binary vectors
       na_in_r_j_bv <- is.na(R[, j_s_factor])  # FG simply avoid computing it at every iteration - actually should be !not_na_in_r_j_bv because R should be as before
       not_na_in_r_j_bv <- !na_in_r_j_bv  # FG simply avoid computing it at every iteration - could actually check is not all TRUE before computing stuff above but it should never happen
+      any_na_in_r_j_bv <- any(na_in_r_j_bv)
       # not_na_in_r_j_bv <- !is.na(R[, j]) # FG simply avoid computing it at every iteration - could actually check is not all TRUE before computing stuff above but it should never happen
       # TODO make a function and use it also for X[ir, k2 + j] but it is a bit of a challenge
       # because conditions for max and min must be an input for the function
@@ -289,38 +319,44 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
           tmp_qnorm <- qnorm( p = random_sample_unif, mean = muj[ir], sd = sdj_n )
           X[ir, j_s_factor] <- tmp_qnorm
           if (!this_should_happen(Y, X)) {
-            print_and_append_to_log(c("X[R[, j] == r - 1, j]", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(X[R[, j_s_factor] == r - 1, j_s_factor]), "\n", sep = "\n"), fileConn)
-            print_and_append_to_log(c("X[R[, j] == r + 1, j]", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(X[R[, j] == r + 1, j_s_factor]), "\n", sep = "\n"), fileConn)
-            print_and_append_to_log(c("X[, j]", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(X[, j_s_factor]), "\n", sep = "\n"), fileConn)
-            print_and_append_to_log(c("R[, j]", "\n", sep = "\n"), fileConn)
-            print_and_append_to_log(c(capture.output(R[, j_s_factor]), "\n", sep = "\n"), fileConn)
-            print_and_append_to_log(c("tmp_qnorm", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(tmp_qnorm), "\n", sep = ""), fileConn)
-            print_and_append_to_log(c("random_sample_unif", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(random_sample_unif), "\n", sep = ""), fileConn)
-            print_and_append_to_log(c("tmp_min", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(tmp_min), "\n", sep = ""), fileConn)
-            print_and_append_to_log(c("tmp_max", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(tmp_max), "\n", sep = ""), fileConn)
 
-            print_and_append_to_log(c("lb", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(lower_bound), "\n", sep = ""), fileConn)
-            print_and_append_to_log(c("ub", "\n", sep = ""), fileConn)
-            print_and_append_to_log(c(capture.output(upper_bound), "\n", sep = ""), fileConn)
+            focus_v <- X[R[, j_s_factor] == r - 1, j_s_factor]
+            if (any(!is.finite(focus_v))) {
+              showData(focus_v, fileConn, "X[R[, j] == r - 1, j]")
+            }
+            focus_v <- X[R[, j_s_factor] == r + 1, j_s_factor]
+            if (any(!is.finite(focus_v))) {
+              showData(focus_v, fileConn, "X[R[, j] == r + 1, j]")
+            }
+            focus_v <- X[, j_s_factor]
+            if (any(!is.finite(focus_v))) {
+              showData(focus_v, fileConn, "X[, j]")
+            }
+            focus_v <- R[, j_s_factor]
+            if (any(!is.finite(focus_v))) {
+              showData(focus_v, fileConn, "R[, j]")
+            }
+
+            showData(tmp_qnorm, fileConn, "tmp_qnorm")
+            showData(random_sample_unif, fileConn, "random_sample_unif")
+            showData(tmp_min, fileConn, "tmp_min")
+            showData(tmp_max, fileConn, "tmp_max")
+            showData(lower_cound, fileConn, "lower bound")
+            showData(upper_cound, fileConn, "upper bound")
+
             print_and_append_to_log(c("ir", "\n", sep = ""), fileConn)
             print_and_append_to_log(c(capture.output(ir), "\n", sep = ""), fileConn)
+
             print_and_append_to_log(c("muj[ir]", "\n", sep = ""), fileConn)
             print_and_append_to_log(c(capture.output(muj[ir]), "\n", sep = ""), fileConn)
+
             print_and_append_to_log(c("sdj", sdj_n, "\n", sep = ""), fileConn)
             # print_and_append_to_log(c(capture.output(sdj), "\n", sep=""), fileConn)
             print_and_append_to_log(c("random_sample_unif", "\n", sep = ""), fileConn)
             print_and_append_to_log(c(capture.output(random_sample_unif), "\n", sep = ""), fileConn)
             stopifXnotfinite(Y, X, fileConn,
               paste(
-                "second", "j=", toString(j), "r=", toString(r), "max_unif", toString(tmp_max), "min_unif", toString(tmp_min)
+                "Infinite values while sampling Z1 (singleton factor)", "j=", toString(j), "r=", toString(r), "max_unif", toString(tmp_max), "min_unif", toString(tmp_min)
               )
             )
           }
@@ -329,12 +365,13 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
       }
       # na_in_r_j_bv <- is.na(R[, j_s_factor])  # FG simply avoid computing it at every iteration - actually should be !not_na_in_r_j_bv because R should be as before
       # ir <- (1:n)[is.na(R[, j_s_factor])]
+      # if (any(na_in_r_j_bv)) {  # FG run only if needed
       if (any(na_in_r_j_bv)) {  # FG run only if needed
         ir <- (1:n)[na_in_r_j_bv]
         # ir <- (1:n)[is.na(R[, j_s_factor])]
         set.seed(random_seed_n)  # FG set random generator seed
         X[ir, j_s_factor] <- rnorm(n = length(ir), mean = muj[ir], sd = sdj_n)
-        stopifXnotfinite(Y, X, fileConn, "third")
+        stopifXnotfinite(Y, X, fileConn, "Infinite values while sampling Z1 (singleton factor, missing values)")
         random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
         # }else{
         #   ir <- (1:n)[is.na(R[, j_s_factor])]
@@ -364,11 +401,11 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
     # FG however it is used also as a column index of X and S
     # FG I think this can be done only if singleton_factor_index preceed poly_factor_index
     # FG so that the first k = (k1 + k2) columns of both X and Lambda (and S) are the same
+    # if (exist_poly_factor_b) {
+    #   print_and_append_to_log(c("Start poly factor sampling", "\n"), fileConn)
+    # }
     if (exist_poly_factor_b) {
-      print_and_append_to_log(c("Start poly factor sampling", "\n"), fileConn)
-    }
-    if (exist_poly_factor_b) {
-      for (j_var in tmp_var_with_poly_factor_index) {  # FG Loop over variables that don't have dummy factor
+      for (j_var in tmp_var_with_poly_factor_index) {  # FG Loop over variables that don't have dummy factor assocaited
         # TODO create list which_nonzero_loadings_ls[[j]] <- which(Lambda[j, ] != 0)
         q <- which(Lambda[j_var,] != 0)  # FG j is used as position of Lambda row
         # maybe assert len(q) = 1
@@ -406,18 +443,19 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
               mean = muj[ir],
               sd = sdj_n
             )  # FG j+k2
-            stopifXnotfinite(Y, X, fileConn, "4th")
+            stopifXnotfinite(Y, X, fileConn, "Infinite values while sampling Z2 (variables of poly factor)")
             random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
             # }
           }
         }
+        # FG simply avoid computing it at every iteration -
         na_in_r_j_bv <- is.na(R[, j_var])  # FG - actually should be !not_na_in_r_j_bv because R should be as before
         # ir <- (1:n)[is.na(R[, j])]
         if (any(na_in_r_j_bv)) {  # FG run only if needed
           ir <- (1:n)[na_in_r_j_bv]
           set.seed(random_seed_n)  # FG set random generator seed
           X[ir, k2 + j_var] <- rnorm(length(ir), muj[ir], sdj_n)  # FG j+k2
-          stopifXnotfinite(Y, X, fileConn, "5th")
+          stopifXnotfinite(Y, X, fileConn, "Infinite values while sampling Z2 (variables of poly factor, missing values)")
           random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
         }
       }
@@ -444,10 +482,10 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
       # FG
       muj <- X[, all_var_in_X_col_index] %*% t(A)
       set.seed(random_seed_n)  # FG set random generator seed
-      X[, poly_factor_index] <- muj + rmvnorm(n, sigma = sdj_n)  # Generates A Vector Of Random Values From A Multivariate Normal Distribution - not sure because it mentions a dae pacakge
-      stopifXnotfinite(Y, X, fileConn, "6th")
+      X[, poly_factor_index] <- muj + rmvnorm(n, sigma = sdj_n)  # Generates A Vector Of Random Values From A Multivariate Normal Distribution - not sure because it mentions a dae package
+      # stopifXnotfinite(Y, X, fileConn, "6th")
       random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
-      eta2 <- X[, poly_factor_index]
+      # eta2 <- X[, poly_factor_index]  # FG We actually don't need to set this variable
       if (!all(is.finite(X[, poly_factor_index]))) {
         print_and_append_to_log(c("Factors non-singleton:", k2, "\n"), fileConn)
         print_and_append_to_log(c("Input Dataframe", "\n"), fileConn)
@@ -455,18 +493,18 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
         print_and_append_to_log(c("Current ", "\n"), fileConn)
         print_and_append_to_log(c(capture.output(X[, poly_factor_index]), "\n", sep = ""), fileConn)
       }
-      stopifXnotfinite(Y, X, fileConn, "7th")
+      stopifXnotfinite(Y, X, fileConn, "Infinite values while sampling eta2")
     }
 
     #
     Z <- cbind(Z1, Z2)
-    eta <- cbind(eta1, eta2)  # This command must be executed even if at least one of k1 and k2 are zero
+    # eta <- cbind(eta1, eta2)  # FG We actually don't need to set this variable
 
     ### identification condition
     ## Original
 
     if (exist_poly_factor_b) {
-      print_and_append_to_log(c("Impose identification condition", "\n"), fileConn)
+      # print_and_append_to_log(c("Impose identification condition", "\n"), fileConn)
       for (j_factor in poly_factor_index) {
         # FG which(Lambda[, j_factor] != 0)[1] returns a variable, that hence is a number v s.t. 1<=v<=p
         # FG  since the k1 singleton variable/factors are the first k1 columns of X, we must have that v>=k1
@@ -673,7 +711,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   }
   # close(fileConn)
 
-  Z.pmean <- apply(Z.imp, c(1, 2), mean)  # Actually we don't use this anymore
+  # Z.pmean <- apply(Z.imp, c(1, 2), mean)  # FG this is not stored anymore
 
   # # 
   #G.ps <- list(Sigma.psamp = C.psamp, Y.pmean = Y.pmean, Y.impute = Y.imp, Z.pmean = Z.pmean, Z.impute = Z.imp, LPC = LPC)
