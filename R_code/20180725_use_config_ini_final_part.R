@@ -14,13 +14,15 @@ library(infotheo)
 library(BDgraph)
 library(pcalg)  # depends on bioconductor
 library(bnlearn)
-library(ConfigParser)  # GPL-
+library(ConfigParser)  # GPL -
 library(Rgraphviz)  # for using toDot
 # library(configr)  # alternative to package above
 
 # MAIN
 if (sys.nframe() == 0) {
   messaging_b <- TRUE
+  data_df <- NULL
+  Lambda <- NULL
   # these are used for debugging (I don't need to pass Python stuff)
   #
   # args <- c("/Volumes/encrypted_data_sparse/data_for_demo/first_config.ini")
@@ -35,6 +37,8 @@ if (sys.nframe() == 0) {
   if (messaging_b) {
     fileConn <- file("output.txt", 'a')  # TODO get it from config
     sink(file = fileConn, append = TRUE, type = 'message')  # future: unset type and use sink for managing output. Modify print_and_append_to_log because it could become redundant
+  } else {
+    fileConn <- NULL
   }
 
   # Read input config file and get all the arguments from that
@@ -42,9 +46,9 @@ if (sys.nframe() == 0) {
   config <- ConfigParser$new(Sys.getenv(), optionxform = identity)
   config$read(filepath = args[1])
   # IDEA: make this piece of code (till loop) a function:
-  # Input: (config file, messaging_b, optional data_df, optional factor_loading_df)
-  # Processing: initialize stuff
-  # Output: pc_parameters_ls, infer_copula_param_ls, bootstrap_param_ls
+  # Input: (config_obj, messaging_b, data_df = NULL, Lambda = NULL)
+  # Processing:
+  # Output: pc_parameters_ls, infer_copula_param_ls, all_infer_param_ls, factor_names
   # BUT we need a special script for testing to specify input
 
   # args <- c("/Volumes/encrypted_data_sparse/demo_output/test_background_1000_bootstrap_3_merged_data.csv",
@@ -70,18 +74,26 @@ if (sys.nframe() == 0) {
   # data_df <- read.csv(file = '/Volumes/encrypted_preprocessed_data/data_for_demo/intersection/data_df.csv', row.names = 1, na.strings=c("",".","NA"))
   # factor_loading_df <- read.csv(file = '/Volumes/encrypted_preprocessed_data/data_for_demo/intersection/factor_loading_df.csv', row.names = 1,  na.strings=c("",".","NA"))
 
-  data_df <- read.csv(
-    file = config$get(option = "output_path_merged_data", section = "output_paths"),
-    sep = column_separator_str, row.names = 1, na.strings = c("", ".", "NA")
-  )
+  if (is.null(data_df)) {
+    data_df <- read.csv(
+      file = config$get(option = "output_path_merged_data", section = "output_paths"),
+      sep = column_separator_str, row.names = 1, na.strings = c("", ".", "NA")
+    )
+  }
 
-  factor_loading_df <- read.csv(
-    # file = args[2],
-    file = config$get(option = "output_path_merged_factor_model_loading", section = "output_paths"),
-    sep = column_separator_str, row.names = 1, na.strings = c("", ".", "NA")
-  )
+  if (is.null(Lambda)) {
+  # if (is.null(factor_loading_df)) {
+    factor_loading_df <- read.csv(
+      # file = args[2],
+      file = config$get(option = "output_path_merged_factor_model_loading", section = "output_paths"),
+      sep = column_separator_str, row.names = 1, na.strings = c("", ".", "NA")
+    )
+    Lambda <- data.matrix(factor_loading_df)
+    factor_names <- colnames(factor_loading_df)
+  } else {
+    factor_names <- 1:ncol(Lambda)
+  }
 
-  factor_names <- colnames(factor_loading_df)
   # load(file = '/Volumes/encrypted_preprocessed_data/demo_aggressotype_transfer.rda')
   # data_matrix <- as.numeric(data_matrix)
   # factor_loading_matrix <- as.numeric(factor_loading_matrix)
@@ -107,7 +119,7 @@ if (sys.nframe() == 0) {
     config$getfloat(option = "bootstrap_n", section = "edge_weight_algorithm")
     # args[6]
   )  # in INI e.g. 500
-  causal_discovery_algorithm_run_n <- max(original_bootstrap_n, 1)  # if original_bootstrap_n ==0, we know that no boostrap must be performed
+  causal_discovery_algorithm_run_n <- max(original_bootstrap_n, 1)  # if original_bootstrap_n ==0, we know that no bootstrap must be performed
 
   # perform_bootstrap_b <- (original_bootstrap_n >= 1)
   no_perform_bootstrap_b <- (original_bootstrap_n == 0)
@@ -140,7 +152,7 @@ if (sys.nframe() == 0) {
   # input_bgk_from_to_mat <- cbind(y, x)  # better use form above because this is to from and now we useded the ones with rev columns at the same time
   ##
 
-  causal_discovery_observation_n <- as.integer(config$getfloat(option = "causal_discovery_observation_n", section = "pc_algorithm"))
+  # causal_discovery_observation_n <- as.integer(config$getfloat(option = "causal_discovery_observation_n", section = "pc_algorithm"))
 
   # if (original_bootstrap_n >= 1) {
   #   bootstrap_random_seed_n <- bootstrap_first_random_seed_n
@@ -149,7 +161,8 @@ if (sys.nframe() == 0) {
   ## some checks
   stopifnot(gibbs_burn_in_n < gibbs_sampling_n)  # burn-in must be lower
   stopifnot(all(sapply(data_df, is.numeric)))  # check all columns in data df are numeric
-  stopifnot(all(sapply(factor_loading_df, is.numeric)))  # check all columns in factor df are numeric
+  # stopifnot(all(sapply(factor_loading_df, is.numeric)))  # check all columns in factor df are numeric
+  stopifnot(all(sapply(Lambda, is.numeric)))  # TODO see if it works - check all columns in factor df are numeric
 
   run2pcalgo_ls <- vector(mode = "list", length = causal_discovery_algorithm_run_n)
   run2pcalgo_bad_ls <- run2pcalgo_ls  # Stores the ones we removed
@@ -215,7 +228,7 @@ if (sys.nframe() == 0) {
 
   infer_copula_param_ls <- list(
     Y = list(NULL),
-    Lambda = data.matrix(factor_loading_df),
+    Lambda = Lambda,  # data.matrix(factor_loading_df),
     nsamp = gibbs_sampling_n,
     odens = odens_n,  # Store each Gibbs sampling output
     first_random_seed = gibbs_first_random_seed_n,
@@ -228,49 +241,121 @@ if (sys.nframe() == 0) {
     infer_copula_param_ls[['fileConn']] <- fileConn
   }
 
-  factor_n <- length(factor_names)
-  throw_away_odens_n <- floor(gibbs_burn_in_n / odens_n)
+  # factor_n <- length(factor_names)
+  # throw_away_odens_n <- floor(gibbs_burn_in_n / odens_n)
 
-  # bootstrap_iterarion_param_ls <- list(
+  all_infer_param_ls <- list(
+    data_df = data_df,
+    # factor_n = length(factor_names),
+    factor_n = length(pc_parameters_ls[['labels']]),
+    throw_away_odens_n = floor(gibbs_burn_in_n / odens_n),
+    infer_copula_param_ls = infer_copula_param_ls,
+    pc_parameters_ls = pc_parameters_ls,
+    # output_path_suffstat = output_path_suffstat,
+    output_path_pc_algo_obj = output_path_pc_algo_obj,
+    run2pcalgo_ls = run2pcalgo_ls,
+    run2pcalgo_bad_ls = run2pcalgo_bad_ls,
+    run2suffstat_ls = run2suffstat_ls,
+    causal_discovery_observation_n = as.integer(
+      config$getfloat(option = "causal_discovery_observation_n", section = "pc_algorithm")
+    ),
+    # causal_discovery_observation_n,
+    iRun_n = list(NULL),
+    causal_discovery_algorithm_run_n = causal_discovery_algorithm_run_n,
+    perform_bootstrap_b = perform_bootstrap_b,
+    bootstrap_random_seed_n = bootstrap_random_seed_n,
+    bootstrap_random_seed_update_parameter_n = bootstrap_random_seed_update_parameter_n,
+    fileConn = infer_copula_param_ls[['fileConn']]
+  )
+  # path_to_bn_strength_obj <- config$get(
+  #   option = "output_path_bn_strength_obj", fallback = "", section = "output_paths"
+  # )
+  # path_to_avg_bn_obj <- config$get(
+  #   option = "output_path_avg_bn_obj", fallback = "", section = "output_paths"
+  # )
+  # main_plot_title_str <- config$get(
+  #   option = "core_plot_title_str", fallback = "", section = "plot_and_display"
+  # )
+  # tmp_fig <- config$get(option = "output_path_fig", section = "output_paths")
+
+  post_bootstrap_processing_param_ls <- list(
+    # path_to_bn_strength_obj = path_to_bn_strength_obj,
+    # path_to_avg_bn_obj = path_to_avg_bn_obj,
+    # main_plot_title_str = main_plot_title_str,
+    # tmp_fig = tmp_fig,
+    path_to_bn_strength_obj = config$get(
+      option = "output_path_bn_strength_obj", fallback = "", section = "output_paths"
+    ),
+    path_to_avg_bn_obj = config$get(
+      option = "output_path_avg_bn_obj", fallback = "", section = "output_paths"
+    ),
+    main_plot_title_str = config$get(
+      option = "core_plot_title_str", fallback = "", section = "plot_and_display"
+    ),
+    tmp_fig = config$get(option = "output_path_fig", section = "output_paths"),
+    factor_names = pc_parameters_ls[['labels']],  # factor_names  # also in pc_param_ls
+    perform_bootstrap_b = all_infer_param_ls[['perform_bootstrap_b']]
+  )
+  # return(pc_parameters_ls, infer_copula_param_ls, all_infer_param_ls, post_bootstrap_processing_param_ls, output_path_suffstat)
   #
   # )
+  #
+  tmp_all_infer_param_ls <- all_infer_param_ls
   for (iRun_n in 1:causal_discovery_algorithm_run_n) {
-    tmp_out_ls <- infer_covariance_and_graph(
-      data_df, factor_n, throw_away_odens_n,
-      infer_copula_param_ls,
-      pc_parameters_ls,
-      output_path_pc_algo_obj,
-      run2pcalgo_ls,
-      run2pcalgo_bad_ls,
-      run2suffstat_ls,
-      causal_discovery_observation_n,
-      iRun_n,
-      causal_discovery_algorithm_run_n,
-      perform_bootstrap_b,
-      bootstrap_random_seed_n,
-      bootstrap_random_seed_update_parameter_n,
-      fileConn
-    )
-    bootstrap_random_seed_n <- tmp_out_ls[['bootstrap_random_seed_n']]
-    run2pcalgo_ls <- tmp_out_ls[['run2pcalgo_ls']]
-    run2pcalgo_bad_ls <- tmp_out_ls[['run2pcalgo_bad_ls']]
-    run2suffstat_ls <- tmp_out_ls[['run2suffstat_ls']]
+    # tmp_out_ls <- infer_covariance_and_graph(
+    #   data_df, factor_n, throw_away_odens_n,
+    #   infer_copula_param_ls,
+    #   pc_parameters_ls,
+    #   output_path_pc_algo_obj,
+    #   run2pcalgo_ls,
+    #   run2pcalgo_bad_ls,
+    #   run2suffstat_ls,
+    #   causal_discovery_observation_n,
+    #   iRun_n,
+    #   causal_discovery_algorithm_run_n,
+    #   perform_bootstrap_b,
+    #   bootstrap_random_seed_n,
+    #   bootstrap_random_seed_update_parameter_n,
+    #   fileConn
+    # )
+    # bootstrap_random_seed_n <- tmp_out_ls[['bootstrap_random_seed_n']]
+    # run2pcalgo_ls <- tmp_out_ls[['run2pcalgo_ls']]
+    # run2pcalgo_bad_ls <- tmp_out_ls[['run2pcalgo_bad_ls']]
+    # run2suffstat_ls <- tmp_out_ls[['run2suffstat_ls']]
+    #
+    tmp_all_infer_param_ls[['iRun_n']] <- iRun_n
+    tmp_out_ls <- do.call("infer_covariance_and_graph", tmp_all_infer_param_ls)
+    tmp_all_infer_param_ls[['bootstrap_random_seed_n']] <- tmp_out_ls[['bootstrap_random_seed_n']]
+    tmp_all_infer_param_ls[['run2pcalgo_ls']] <- tmp_out_ls[['run2pcalgo_ls']]
+    tmp_all_infer_param_ls[['run2pcalgo_bad_ls']] <- tmp_out_ls[['run2pcalgo_bad_ls']]
+    tmp_all_infer_param_ls[['run2suffstat_ls']] <- tmp_out_ls[['run2pcalgo_ls']]
   }
+  run2pcalgo_ls <- tmp_out_ls[['run2pcalgo_ls']]
+  run2pcalgo_bad_ls <- tmp_out_ls[['run2pcalgo_bad_ls']]
+  run2suffstat_ls <- tmp_out_ls[['run2suffstat_ls']]
 
+  output_path_pc_algo_obj <- all_infer_param_ls[['output_path_pc_algo_obj']]
+  # output_path_suffstat <- all_infer_param_ls[['output_path_suffstat']]
+
+  if (!stri_isempty(output_path_pc_algo_obj)) {
+    saveRDS(run2pcalgo_ls, file = output_path_pc_algo_obj)
+  }
+  if (!stri_isempty(output_path_suffstat)) {
+    saveRDS(run2suffstat_ls, file = output_path_suffstat)
+  }
+  # return(list(
+  #   run2pcalgo_ls = run2pcalgo_ls,
+  #   run2pcalgo_bad_ls = run2pcalgo_bad_ls,
+  #   run2suffstat_ls = run2suffstat_ls
+  # ))
   cat('\n')
 
   # Save stuff generated in the loop above
   # maybe TODO adjust it when no bootstap is done
-  output_path_suffstat <- config$get(option = "output_path_suffstat", fallback = "", section = "output_paths")
-  if (!stri_isempty(output_path_suffstat)) {
-    saveRDS(run2suffstat_ls, file = output_path_suffstat)
-  }
-  output_path_pc_algo_obj <- config$get(option = "output_path_pc_algo_obj", fallback = "", section = "output_paths")
-  if (!stri_isempty(output_path_pc_algo_obj)) {
-    saveRDS(run2pcalgo_ls, file = output_path_pc_algo_obj)
-  }
+  # function(post_bootstrap_processing_param_ls, run2pcalgo_ls)
 
-  if (no_perform_bootstrap_b) {
+  if (!post_bootstrap_processing_param_ls[['perform_bootstrap_b']]) {
+  # if (no_perform_bootstrap_b) {
     bn_obj <- as.bn(run2pcalgo_ls[[1]], check.cycles = FALSE)  # We are ok with cycles
   } else {
     removed_graph_due_to_blacklist_bv <- sapply(X = run2pcalgo_ls, FUN = is.null)
@@ -287,14 +372,21 @@ if (sys.nframe() == 0) {
     # bootstrapped_bnlearn_list <- lapply(X = bootstrapped_graphnel_list, FUN = as.bn)
     bn_strength_obj <- custom.strength(
       networks = bootstrapped_bnlearn_list,
-      nodes = factor_names,
+      # nodes = factor_names,
+      nodes = post_bootstrap_processing_param_ls[['factor_names']],
       cpdag = FALSE  # If TRUE the (PDAG of) the equivalence class is used instead of the network structure itself. It should make it easier to identify score-equivalent arcs.
     )
-    avg_bn_obj <- averaged.network(strength = bn_strength_obj, nodes = factor_names)  # it automatically gets the thresold from bn_strength_obj
+    avg_bn_obj <- averaged.network(
+      strength = bn_strength_obj,
+      nodes = post_bootstrap_processing_param_ls[['factor_names']],
+      # nodes = factor_names
+    )  # it automatically gets the thresold from bn_strength_obj
 
-    path_to_bn_strength_obj <- config$get(
-      option = "output_path_bn_strength_obj", fallback = "", section = "output_paths"
-    )
+    # Write to file
+    path_to_bn_strength_obj <- post_bootstrap_processing_param_ls[['path_to_bn_strength_obj']]
+    # path_to_bn_strength_obj <- config$get(
+    #   option = "output_path_bn_strength_obj", fallback = "", section = "output_paths"
+    # )
     if (!stri_isempty(path_to_bn_strength_obj)) {
       saveRDS(bn_strength_obj, file = path_to_bn_strength_obj)
       # Save to CSV files (thresholded and not thresholded)
@@ -313,15 +405,18 @@ if (sys.nframe() == 0) {
       )
     }
 
-    path_to_avg_bn_obj <- config$get(
-      option = "output_path_avg_bn_obj", fallback = "", section = "output_paths"
-    )
+    path_to_avg_bn_obj <- post_bootstrap_processing_param_ls[['path_to_avg_bn_obj']]
+    # path_to_avg_bn_obj <- config$get(
+    #   option = "output_path_avg_bn_obj", fallback = "", section = "output_paths"
+    # )
     if (!stri_isempty(path_to_avg_bn_obj)) {
       saveRDS(avg_bn_obj, file = path_to_avg_bn_obj)
     }
   }
 
-  main_plot_title_str <- config$get(option = "core_plot_title_str", fallback = "", section = "plot_and_display")
+  main_plot_title_str <- post_bootstrap_processing_param_ls[['main_plot_title_str']]
+  # main_plot_title_str <- config$get(option = "core_plot_title_str", fallback = "", section = "plot_and_display")
+
   # show_graph_before_bgk_application_b <- config$getboolean(option = "show_graph_before_bgk_application_b", section = "plot_and_display")  # as.logical("False")  # TODO put in INI
   # show_graph_after_bgk_application_b <- config$getboolean(option = "show_graph_after_bgk_application_b", section = "plot_and_display")  # as.logical("True")  # TODO put in INI
   # show_graph_with_dashed_removed_b <- config$getboolean(option = "show_graph_with_dashed_removed_b", section = "plot_and_display") # as.logical("False")  # TODO put in INI
@@ -346,7 +441,9 @@ if (sys.nframe() == 0) {
 
   graphics.off()
 
-  tmp_fig <- config$get(option = "output_path_fig", section = "output_paths")
+  tmp_fig <- post_bootstrap_processing_param_ls[['tmp_fig']]
+  # tmp_fig <- config$get(option = "output_path_fig", section = "output_paths")
+
   # pdf(
   #   config$get(option = "output_path_fig_pdf", section = "output_paths"),
   #   width=6, height=3, onefile = FALSE
@@ -378,9 +475,11 @@ if (sys.nframe() == 0) {
 
   # cat(first_title, "\n")
   # if (show_graph_before_bgk_application_b) {
-  if (no_perform_bootstrap_b) {
+  if (!post_bootstrap_processing_param_ls[['perform_bootstrap_b']]) {
+  # if (no_perform_bootstrap_b) {
     # TODO - output to var, convert and save it
     plot(run2pcalgo_ls[[1]], main = first_title)  # if
+    out_graph <- run2pcalgo_ls[[1]]
   } else {
     # TODO - output to var, convert to bn <- strength (if needed), convert to DOT format or other and save to path specified in INI
     graph_nel <- strength.plot(x = avg_bn_obj, strength = bn_strength_obj, main = first_title)
@@ -407,6 +506,7 @@ if (sys.nframe() == 0) {
       #
       # # cat(c(graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]], "\n"))
     }
+    out_graph <- graph_nel
     # TODO fix it
     # toDot(graph = graph_nel, filename =  sub('.pdf', '.gv', tmp_fig))  # from library(Rgraphviz)
     #
