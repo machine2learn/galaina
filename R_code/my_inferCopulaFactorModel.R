@@ -1,8 +1,8 @@
 # library(here)
 # source(here("R_code/20180725_use_config_ini_final_part.R"))  # Load print_and_append_to_log
-print_and_append_to_log <- function(tmp_log_str_v, fileConn) {
+print_and_append_to_log <- function(tmp_log_str_v, fileConn = NULL) {
   cat(tmp_log_str_v)
-  if (!is.null(fileConn)) {
+  if (!is.null(fileConn) & !is.list(fileConn)) {  # I put this not-list confition because in this way it skips also fileConn = list(NULL)
     write(paste(tmp_log_str_v, collapse = " "), file = fileConn, append = TRUE)
   }
 }
@@ -82,7 +82,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   # 
   # Args:
   #   Y, a n by p data matrix
-  #   Lambda, a p by k matrix representing the mapping from factors (columns) to observed variables (rows)
+  #   Lambda, a p by k matrix (nr variables x nr factors) representing the mapping from factors (columns) to observed variables (rows)
   #   nsamp, No. of samples
   #   odens = for Gibbs-sampling thinning, only Corr matrix after odens sampling is stored
   #   output_intermediate = path used for generating path where intermediate samples covariance are saved
@@ -143,13 +143,13 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
     )
   }
   ## Get the prior graph G
-  G1 <- matrix(1, k, k) - diag(k)
+  G1 <- matrix(data = 1, nrow = k, ncol = k) - diag(k)
   if (exist_singleton_factor_b) {
-    G2 <- t(Lambda[-singleton_factor_index,])
+    G2 <- t(Lambda[-singleton_factor_index, ])
   } else {
     G2 <- t(Lambda)
   }
-  G3 <- matrix(0, nrow = p - k1, ncol = p - k1)
+  G3 <- matrix(data = 0, nrow = p - k1, ncol = p - k1)
   G <- rbind(cbind(G1, G2), cbind(t(G2), G3))
   G[lower.tri(G)] <- 0
   ## prior parameters for the G-Wishart distribution
@@ -235,7 +235,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   Y.pmean <- Y
   # Z.pmean <- Z2   # FG this is not stored anymore
   if (impute) {
-    Y.pmean <- matrix(0, nrow = n, ncol = p)
+    Y.pmean <- matrix(data = 0, nrow = n, ncol = p)
   }
   LPC <- NULL
   stored_samples_n <- floor(nsamp / odens)
@@ -615,7 +615,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
     }
     #stopifnot(stopifnot_condition_X)
 
-    # Sample S
+    # Sample S - correlation matrix
     set.seed(random_seed_n)  # FG set random generator seed
     if (version_at_least("BDgraph", "2.56")) {
       P <- rgwish(n = 1, adj = G, b = n + n0, D = S0 * n0 + crossprod(X))
@@ -720,6 +720,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   return(G.ps)
 }
 
+
 infer_covariance_and_graph <- function(
   data_df, factor_n, throw_away_odens_n,
   infer_copula_param_ls,
@@ -796,7 +797,6 @@ infer_covariance_and_graph <- function(
       tmp_run_data_df <- data_df[iteration_rows_id, ]
     }
   }
-
 
   # cat(dim(tmp_cop_fac_obj$Sigma.psamp), "\n")
   # Extract samples of the correlation matrix over latent variables, ignoring the first samples (burn-in)
@@ -889,7 +889,7 @@ infer_covariance_and_graph <- function(
       fileConn
     )
     stopifnot(sum(tmp_blacklist_arcs_present_bv) > 0)
-    print_and_append_to_log(c(dir_arc_blacklist_mat[tmp_blacklist_arcs_present_bv]), fileConn)
+    print_and_append_to_log(dir_arc_blacklist_mat[tmp_blacklist_arcs_present_bv], fileConn)
   }
   # saveRDS(graph_cfpc, file = args[8])
   cat('\n\n')
@@ -905,24 +905,3 @@ infer_covariance_and_graph <- function(
       run2suffstat_ls = run2suffstat_ls, run2pcalgo_ls = run2pcalgo_ls, run2pcalgo_bad_ls = run2pcalgo_bad_ls
   ))
 }
-
-# bootstrap_and_infer <- function(iRun_n, causal_discovery_algorithm_run_n, bootstrap_random_seed_n, data_df, factor_loading_df,
-# gibbs_sampling_n, odens_n, gibbs_first_random_seed_n, gibbs_random_seed_update_parameter_n, fileConn) {
-#
-#   print_and_append_to_log(c("Current bootstrap sample:", iRun_n, "of", causal_discovery_algorithm_run_n, "\n"), fileConn)
-#   print_and_append_to_log(c("Random seed bootstrap sample:", bootstrap_random_seed_n, "\n"), fileConn)
-#   tmp_run_data_df <- data_df[sample(nrow(data_df), replace = TRUE), ]  # bootstrap sample = sample with replacement
-#   # bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
-#   return(
-#     my_inferCopulaFactorModel(
-#       # Y_df = tmp_run_data_df,
-#       Y = data.matrix(tmp_run_data_df),
-#       Lambda = data.matrix(factor_loading_df),
-#       nsamp = gibbs_sampling_n,
-#       odens = odens_n,  # Store each Gibbs sampling output
-#       first_random_seed = gibbs_first_random_seed_n,
-#       random_seed_update_parameter = gibbs_random_seed_update_parameter_n,
-#       fileConn = fileConn
-#     )
-#   )
-# }
