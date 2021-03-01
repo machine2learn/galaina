@@ -905,3 +905,171 @@ infer_covariance_and_graph <- function(
       run2suffstat_ls = run2suffstat_ls, run2pcalgo_ls = run2pcalgo_ls, run2pcalgo_bad_ls = run2pcalgo_bad_ls
   ))
 }
+
+merge_discovered_graphs <- function(post_bootstrap_processing_param_ls, run2pcalgo_ls) {
+
+  #TODO double check it is ok when no bootstap is done
+  if (!post_bootstrap_processing_param_ls[['perform_bootstrap_b']]) {
+    # if (no_perform_bootstrap_b) {
+    bn_obj <- as.bn(run2pcalgo_ls[[1]], check.cycles = FALSE)  # We are ok with cycles
+  } else {
+    removed_graph_due_to_blacklist_bv <- sapply(X = run2pcalgo_ls, FUN = is.null)
+    # cat("Graphs removed due to incompatibility with blacklist", sum(removed_graph_due_to_blacklist_bv), "\n")
+    print_and_append_to_log(c("Graphs removed due to incompatibility with blacklist:", sum(removed_graph_due_to_blacklist_bv), "\n"), fileConn)
+    bootstrapped_bnlearn_list <- lapply(
+      X = run2pcalgo_ls[!removed_graph_due_to_blacklist_bv],  # Ignore NULL elements of the list
+      # X = run2pcalgo_ls[!sapply(run2pcalgo_ls, is.null)],  # Ignore NULL elements of the list
+      # X = run2pcalgo_ls,
+      FUN = as.bn,
+      check.cycles = FALSE   # We are ok with cycles
+    )
+    # saveRDS(bootstrapped_graphnel_list, file = args[8])
+    # bootstrapped_bnlearn_list <- lapply(X = bootstrapped_graphnel_list, FUN = as.bn)
+    bn_strength_obj <- custom.strength(
+      networks = bootstrapped_bnlearn_list,
+      # nodes = factor_names,
+      nodes = post_bootstrap_processing_param_ls[['factor_names']],
+      cpdag = FALSE  # If TRUE the (PDAG of) the equivalence class is used instead of the network structure itself. It should make it easier to identify score-equivalent arcs.
+    )
+    avg_bn_obj <- averaged.network(
+      strength = bn_strength_obj,
+      nodes = post_bootstrap_processing_param_ls[['factor_names']],
+      # nodes = factor_names
+    )  # it automatically gets the thresold from bn_strength_obj
+
+    # Write to file
+    path_to_bn_strength_obj <- post_bootstrap_processing_param_ls[['path_to_bn_strength_obj']]
+    # path_to_bn_strength_obj <- config$get(
+    #   option = "output_path_bn_strength_obj", fallback = "", section = "output_paths"
+    # )
+    if (!stri_isempty(path_to_bn_strength_obj)) {
+      saveRDS(bn_strength_obj, file = path_to_bn_strength_obj)
+      # Save to CSV files (thresholded and not thresholded)
+      bn_strength_obj_df <- readRDS(path_to_bn_strength_obj)
+      write.csv(
+        bn_strength_obj_df,
+        file = sub('.rds', '.csv', path_to_bn_strength_obj),
+        row.names = FALSE,
+        na = ""
+      )
+      write.csv(
+        bn_strength_obj_df[bn_strength_obj_df$strength >= attr(bn_strength_obj_df, "threshold"),],
+        file = sub('.rds', '_thresholded.csv', path_to_bn_strength_obj),
+        row.names = FALSE,
+        na = ""
+      )
+    }
+
+    path_to_avg_bn_obj <- post_bootstrap_processing_param_ls[['path_to_avg_bn_obj']]
+    # path_to_avg_bn_obj <- config$get(
+    #   option = "output_path_avg_bn_obj", fallback = "", section = "output_paths"
+    # )
+    if (!stri_isempty(path_to_avg_bn_obj)) {
+      saveRDS(avg_bn_obj, file = path_to_avg_bn_obj)
+    }
+  }
+
+  main_plot_title_str <- post_bootstrap_processing_param_ls[['main_plot_title_str']]
+  # main_plot_title_str <- config$get(option = "core_plot_title_str", fallback = "", section = "plot_and_display")
+
+  # show_graph_before_bgk_application_b <- config$getboolean(option = "show_graph_before_bgk_application_b", section = "plot_and_display")  # as.logical("False")  # TODO put in INI
+  # show_graph_after_bgk_application_b <- config$getboolean(option = "show_graph_after_bgk_application_b", section = "plot_and_display")  # as.logical("True")  # TODO put in INI
+  # show_graph_with_dashed_removed_b <- config$getboolean(option = "show_graph_with_dashed_removed_b", section = "plot_and_display") # as.logical("False")  # TODO put in INI
+
+  # Check if there are some blacklist directed edges to be removed
+  # if (original_bootstrap_n >= 1){
+  #   dir_arcs_mat <- directed.arcs(avg_bn_obj)
+  # } else {
+  #   dir_arcs_mat <- directed.arcs(bn_obj)
+  # }
+  # dir_arcs_to_be_removed_n <- 0
+  # if ((nrow(dir_arcs_mat) > 0) & (file.exists(input_path_directed_edges_blacklist)) & (nrow(dir_arc_blacklist_mat) > 0)) {  # if at least one od those mat is empty, there are no arcs to be removed
+  #   dir_arcs_and_blacklist_mat <- rbind(unique(dir_arcs_mat), unique(dir_arc_blacklist_mat))
+  #   dir_arcs_in_blacklist_mat <- dir_arcs_and_blacklist_mat[duplicated(dir_arcs_and_blacklist_mat), , drop = FALSE]
+  #   dir_arcs_to_be_removed_n <- nrow(dir_arcs_in_blacklist_mat)
+  # }
+  #
+  # make_after_removal_plot_b <- (show_graph_after_bgk_application_b & (dir_arcs_to_be_removed_n > 0))
+  # if (!(make_after_removal_plot_b | show_graph_before_bgk_application_b)) {
+  #   show_graph_before_bgk_application_b <- TRUE  # if there is no second plot to make, force to make the first one
+  # }
+
+  graphics.off()
+
+  tmp_fig <- post_bootstrap_processing_param_ls[['tmp_fig']]
+  # tmp_fig <- config$get(option = "output_path_fig", section = "output_paths")
+
+  # pdf(
+  #   config$get(option = "output_path_fig_pdf", section = "output_paths"),
+  #   width=6, height=3, onefile = FALSE
+  # )
+  do.call(
+    file_ext(tmp_fig),
+    list(tmp_fig, width = 6, height = 3, onefile = FALSE)
+  )
+
+  # Used when we were enforcing balacklist at the end
+  # par(mfrow=c(show_graph_before_bgk_application_b + make_after_removal_plot_b, 1))
+  # par(mar=c(1,1,1,1))
+  par(mfrow = c(1, 1))
+
+  first_title <- main_plot_title_str  # 'Causal graph with all edges'
+  # Used when we were enforcing balacklist at the end
+  # if (make_after_removal_plot_b) {
+  #   first_title <- paste(main_plot_title_str, "- including blacklist")  #'Before removing blacklist edges'
+  # }
+  # if (!(make_after_removal_plot_b) & (dir_arcs_to_be_removed_n == 0)) {
+  #   first_title <- paste(main_plot_title_str, "- no blacklist effect")  # No edges were removed
+  # }
+  # second_title <- main_plot_title_str
+  # if (make_after_removal_plot_b & show_graph_with_dashed_removed_b) {
+  #   second_title <- paste(main_plot_title_str, "- blacklist dashed")  #'Before removing blacklist edges'
+  # } else if (make_after_removal_plot_b & !show_graph_with_dashed_removed_b) {
+  #   second_title <- paste(main_plot_title_str, "- excluding blacklist")  #'Before removing blacklist edges'
+  # }
+
+  # cat(first_title, "\n")
+  # if (show_graph_before_bgk_application_b) {
+  if (!post_bootstrap_processing_param_ls[['perform_bootstrap_b']]) {
+    # if (no_perform_bootstrap_b) {
+    # TODO - output to var, convert and save it
+    plot(run2pcalgo_ls[[1]], main = first_title)  # if
+    out_graph <- run2pcalgo_ls[[1]]
+  } else {
+    # TODO - output to var, convert to bn <- strength (if needed), convert to DOT format or other and save to path specified in INI
+    graph_nel <- strength.plot(x = avg_bn_obj, strength = bn_strength_obj, main = first_title)
+    # threshold = attributes(bn_strength_obj)$threshold, # No need to specify the thershold
+    # fix edge
+    # Aug 2019 -
+    # strength.plot() now saves arc strengths as weights in the graphNEL object it returns.
+    tmp_key_v <- names(graph_nel@renderInfo@edges[["lwd"]])
+    lwd_key2data_key <- as.list(setNames(object = gsub("[~]", "|", tmp_key_v), nm = tmp_key_v))
+    for (iName in names(lwd_key2data_key)) {
+      # graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]] <- graph_nel@edgeData@data[iName]]
+      graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]] <- graph_nel@renderInfo@edges[["lwd"]][[iName]]
+      #
+      # graph_nel@renderInfo@edges[["arrowhead"]][[iName]] in theory should store the type of arrowhead
+      # should be able to use the setter edgeData(graph, from, to, attr)
+      # we need also to set the arrowtail
+      # So maybe loading graph_nel and set arrowtail and arrowhead according to the amat_pag will be enough
+      # this strength.plot code
+      # https://github.com/cran/bnlearn/blob/414301e1a241148ec7bfb7e06f5eeda00ef2cd2b/R/frontend-plot.R#L34
+      # calls inside graphviz.backend that manipulates arrowtail and arrowhead
+      # https://github.com/cran/bnlearn/blob/414301e1a241148ec7bfb7e06f5eeda00ef2cd2b/R/graphviz-backend.R#L3
+      # that inside plot with Rgraphviz::renderGraph(graph.plot)
+      # maybe we just need to set arrowhead and tails and then a mod version of strength.plot calling a mod version of graphviz.backend that does not touch arrotail and arrowhead
+      #
+      # # cat(c(graph_nel@edgeData@data[[lwd_key2data_key[[iName]]]][["penwidth"]], "\n"))
+    }
+    out_graph <- graph_nel
+    # TODO fix it
+    # toDot(graph = graph_nel, filename =  sub('.pdf', '.gv', tmp_fig))  # from library(Rgraphviz)
+    #
+    # TODO make it store edge weight
+    #  toDotR(G = graph_nel, outDotFile = "~/Documents/figures/estonian.gv")  # from library(graph)
+    # toDotR(G = graph_nel, outDotFile = sub('.pdf', '.gv', tmp_fig))
+    # https://github.com/Bioconductor/graph/blob/master/R/TODOT.R
+  }
+  return(out_graph)
+}
+
