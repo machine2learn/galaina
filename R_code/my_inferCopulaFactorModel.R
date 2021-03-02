@@ -93,13 +93,17 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   # Return: a list that contains samples of the correlation matrix over all variables (factors + observed variables)
   #   
 
-  print_and_append_to_log(c("Tollerance: ", tol, "\n"), fileConn)  # FG
+  # print_and_append_to_log(c("Tollerance: ", tol, "\n"), fileConn)  # FG
 
   # I stores in C.psamp only some of the Gibbs sampled Correlation matrices. 
   # However, in this way to throw-away the burn-in samples from the C.psamp given as output by the function we must throw away the first floor((throw_away_n + 1)/odens_n)
   require(BDgraph)
   library(mvtnorm)
   library(sbgcop)
+
+  library(stringi)  # to check if strings are empty
+  library(tools)  # to get file extension
+  library(bnlearn)
 
   random_seed_n <- first_random_seed  # FG for controlling random sampling
   # update_parameter_random_seed_n <- 10  # FG for controlling random sampling
@@ -189,7 +193,8 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   Z[is_na_Y] <- Zfill[is_na_Y]
   rm(is_na_Y)
   # pseudo data of factors with a single indicator
-  Z1 = eta1 = Z[, singleton_factor_index]  # FG to be changed TODO
+  eta1 <- Z[, singleton_factor_index]
+  Z1 <- eta1
   # pseudo data of response variables
   if (exist_singleton_factor_b) {
     Z2 <- Z[, -singleton_factor_index]
@@ -379,7 +384,8 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
         # }
       }
     }
-    Z1 = eta1 = X[, singleton_factor_index]  # FG to be changed
+    eta1 <- X[, singleton_factor_index]
+    Z1 <- eta1
 
     ## sample Z2
     # FG these are the factors whose variables have multiple indicators
@@ -725,6 +731,8 @@ infer_covariance_and_graph <- function(
   data_df, factor_n, throw_away_odens_n,
   infer_copula_param_ls,
   pc_parameters_ls,
+  input_path_directed_edges_blacklist,
+  dir_arc_blacklist_mat,
   output_path_pc_algo_obj,
   run2pcalgo_ls,
   run2pcalgo_bad_ls,
@@ -766,6 +774,7 @@ infer_covariance_and_graph <- function(
     tmp_cop_fac_obj <- do.call("my_inferCopulaFactorModel", tmp_infer_copula_param_ls)
   } else {
     repeat {
+      # TODO double check that syntax is right
       tmp_cop_fac_obj <- tryCatch(
         tmp_cop_fac_obj <- do.call("my_inferCopulaFactorModel", tmp_infer_copula_param_ls),
         error = identity
@@ -795,6 +804,8 @@ infer_covariance_and_graph <- function(
       iteration_rows_id <- sample(nrow(data_df), replace = TRUE)
       bootstrap_random_seed_n <- update_random_seed(bootstrap_random_seed_n, bootstrap_random_seed_update_parameter_n)  # FG update random seed
       tmp_run_data_df <- data_df[iteration_rows_id, ]
+      tmp_infer_copula_param_ls[['Y']] <- data.matrix(tmp_run_data_df)
+      tmp_infer_copula_param_ls[['first_random_seed']] <- bootstrap_random_seed_n
     }
   }
 
