@@ -1081,6 +1081,48 @@ merge_discovered_graphs <- function(post_bootstrap_processing_param_ls, run2pcal
     # toDotR(G = graph_nel, outDotFile = sub('.pdf', '.gv', tmp_fig))
     # https://github.com/Bioconductor/graph/blob/master/R/TODOT.R
   }
-  return(out_graph)
+ return(list(
+    bn_strength_obj = bn_strength_obj,
+    avg_bn_obj = avg_bn_obj,
+    out_graph = out_graph  # I think this should be enough
+  ))
 }
 
+
+galaina_pipeline <- function(all_param_ls) {
+  # pc_parameters_ls <- all_param_ls[['pc_parameters_ls']]
+  # infer_copula_param_ls <- all_param_ls[['infer_copula_param_ls']]
+  all_infer_param_ls <- all_param_ls[['all_infer_param_ls']]
+  post_bootstrap_processing_param_ls <- all_param_ls[['post_bootstrap_processing_param_ls']]
+  output_path_suffstat <- all_param_ls[['output_path_suffstat']]
+  causal_discovery_algorithm_run_n <- all_infer_param_ls[['causal_discovery_algorithm_run_n']]
+
+  tmp_all_infer_param_ls <- all_infer_param_ls
+  for (iRun_n in 1:causal_discovery_algorithm_run_n) {
+    tmp_all_infer_param_ls[['iRun_n']] <- iRun_n
+    tmp_out_ls <- do.call("infer_covariance_and_graph", tmp_all_infer_param_ls)
+    if (iRun_n == causal_discovery_algorithm_run_n) {
+      rm(list = 'tmp_all_infer_param_ls')
+    } else {
+      tmp_all_infer_param_ls[['bootstrap_random_seed_n']] <- tmp_out_ls[['bootstrap_random_seed_n']]
+      tmp_all_infer_param_ls[['run2pcalgo_ls']] <- tmp_out_ls[['run2pcalgo_ls']]
+      tmp_all_infer_param_ls[['run2pcalgo_bad_ls']] <- tmp_out_ls[['run2pcalgo_bad_ls']]
+      tmp_all_infer_param_ls[['run2suffstat_ls']] <- tmp_out_ls[['run2pcalgo_ls']]
+      # bootstrap_random_seed_n <- tmp_out_ls[['bootstrap_random_seed_n']]
+    }
+  }
+  run2pcalgo_ls <- tmp_out_ls[['run2pcalgo_ls']]
+  run2pcalgo_bad_ls <- tmp_out_ls[['run2pcalgo_bad_ls']]
+  run2suffstat_ls <- tmp_out_ls[['run2suffstat_ls']]
+  output_path_pc_algo_obj <- all_infer_param_ls[['output_path_pc_algo_obj']]
+  if (!stri_isempty(output_path_pc_algo_obj)) {
+    saveRDS(run2pcalgo_ls, file = output_path_pc_algo_obj)
+  }
+  if (!stri_isempty(output_path_suffstat)) {
+    saveRDS(run2suffstat_ls, file = output_path_suffstat)
+  }
+  cat('\n')
+  out_ls <- merge_discovered_graphs(post_bootstrap_processing_param_ls, run2pcalgo_ls)
+  dev.off()
+  return(out_ls)
+}

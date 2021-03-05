@@ -18,12 +18,16 @@ library(ConfigParser)  # GPL -
 library(Rgraphviz)  # for using toDot
 # library(configr)  # alternative to package above
 
+load_copula_factor_functions <- function(config)
+{
+  path_r_infer_copula_factor_script <- config$get(option = "path_r_infer_copula_factor_script", section = "r_front_end")  #',' <- "NULL"
+  source(path_r_infer_copula_factor_script)
+}
+
 initialize_galaina_param_and_input <- function(config, Y = NULL, Lambda = NULL, fileConn = NULL)
 {
-  column_separator_str <- config$get(option = "column_separator_str", section = "input_paths_and_related_parameters")  #',' <- "NULL"
-  path_r_infer_copula_factor_script <- config$get(option = "path_r_infer_copula_factor_script", section = "r_front_end")  #',' <- "NULL"
 
-  source(path_r_infer_copula_factor_script)
+  column_separator_str <- config$get(option = "column_separator_str", section = "input_paths_and_related_parameters")  #',' <- "NULL"
   # source('/Users/fabio/projects/aggressotype/code/software/software_demo/R_code/my_inferCopulaFactorModel.R')
   # source('my_inferCopulaFactorModel.R')
 
@@ -42,7 +46,7 @@ initialize_galaina_param_and_input <- function(config, Y = NULL, Lambda = NULL, 
   }
 
   if (!is.null(Lambda)) {
-    factor_names <- 1:ncol(Lambda)
+    factor_names <- as.character(1:ncol(Lambda))
   } else {
     # if (is.null(factor_loading_df)) {
     factor_loading_df <- read.csv(
@@ -298,53 +302,12 @@ if (sys.nframe() == 0) {
   config <- ConfigParser$new(Sys.getenv(), optionxform = identity)
   config$read(filepath = args[1])
 
+  load_copula_factor_functions(config)
+
   all_param_ls <- initialize_galaina_param_and_input(config, Y, Lambda, fileConn)
 
-  pc_parameters_ls <- all_param_ls[['pc_parameters_ls']]
-  infer_copula_param_ls <- all_param_ls[['infer_copula_param_ls']]
-  all_infer_param_ls <- all_param_ls[['all_infer_param_ls']]
-  post_bootstrap_processing_param_ls <- all_param_ls[['post_bootstrap_processing_param_ls']]
-  output_path_suffstat <- all_param_ls[['output_path_suffstat']]
+  out_ls <- galaina_pipeline(all_param_ls)
 
-  causal_discovery_algorithm_run_n <- all_infer_param_ls[['causal_discovery_algorithm_run_n']]
-  tmp_all_infer_param_ls <- all_infer_param_ls
-  for (iRun_n in 1:causal_discovery_algorithm_run_n) {
-    tmp_all_infer_param_ls[['iRun_n']] <- iRun_n
-    tmp_out_ls <- do.call("infer_covariance_and_graph", tmp_all_infer_param_ls)
-    if (iRun_n == causal_discovery_algorithm_run_n) {
-      rm(list = 'tmp_all_infer_param_ls')
-    } else {
-      tmp_all_infer_param_ls[['bootstrap_random_seed_n']] <- tmp_out_ls[['bootstrap_random_seed_n']]
-      tmp_all_infer_param_ls[['run2pcalgo_ls']] <- tmp_out_ls[['run2pcalgo_ls']]
-      tmp_all_infer_param_ls[['run2pcalgo_bad_ls']] <- tmp_out_ls[['run2pcalgo_bad_ls']]
-      tmp_all_infer_param_ls[['run2suffstat_ls']] <- tmp_out_ls[['run2pcalgo_ls']]
-      # bootstrap_random_seed_n <- tmp_out_ls[['bootstrap_random_seed_n']]
-    }
-  }
-  run2pcalgo_ls <- tmp_out_ls[['run2pcalgo_ls']]
-  run2pcalgo_bad_ls <- tmp_out_ls[['run2pcalgo_bad_ls']]
-  run2suffstat_ls <- tmp_out_ls[['run2suffstat_ls']]
-
-  output_path_pc_algo_obj <- all_infer_param_ls[['output_path_pc_algo_obj']]
-  # output_path_suffstat <- all_infer_param_ls[['output_path_suffstat']]
-
-  if (!stri_isempty(output_path_pc_algo_obj)) {
-    saveRDS(run2pcalgo_ls, file = output_path_pc_algo_obj)
-  }
-  if (!stri_isempty(output_path_suffstat)) {
-    saveRDS(run2suffstat_ls, file = output_path_suffstat)
-  }
-  # return(list(
-  #   run2pcalgo_ls = run2pcalgo_ls,
-  #   run2pcalgo_bad_ls = run2pcalgo_bad_ls,
-  #   run2suffstat_ls = run2suffstat_ls
-  # ))
-  cat('\n')
-
-  # Save stuff generated in the loop above
-  out_graph <- merge_discovered_graphs(post_bootstrap_processing_param_ls, run2pcalgo_ls)
-
-  dev.off()
   print_and_append_to_log(c("Completed", "\n"), fileConn)
   if (messaging_b) {
     sink(type = "message")  # reset message and output sink
