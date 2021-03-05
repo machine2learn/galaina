@@ -79,7 +79,7 @@ install.packages("here")
 ### Activation of the Internal Web Server
 
 In a terminal, execute the following command (Python 3 is the assumed python interpreter):
-```python
+```bash
 python main.py
 ```
 ### Access the Internal Web Server
