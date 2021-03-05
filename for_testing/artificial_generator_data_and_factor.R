@@ -83,22 +83,25 @@ rmvCopulaFactorModel <- function(
 
   #### 2. Generate response data
   ## initializing
-  Y <- mat.or.vec(n,pl+pr)
+  Y <- mat.or.vec(nr = n, nc = pl+pr)
   Y[, 1:pl] <- d_gauss
 
-  ## randomly generate factor loadings (Lamda) from latent factors to response variables
-  Lamda <- matrix(0,pr,pm)
-  index_res_var <- mat.or.vec(pm,1)
+  ## randomly generate factor loadings (Lambda) from latent factors to response variables
+  Lambda <- matrix(data = 0, nrow = pr, ncol = pm)
+
+  # ? index_res_var is a cumsum ?
+  index_res_var <- mat.or.vec(nr = pm, nc = 1)
   for (i in 1:pm) {
     index_res_var[i] <- sum(num_res_var[1:i])
   }
-  index_res_var <- c(0,index_res_var)
+  index_res_var <- c(0, index_res_var)
+
   for (i in 1:pm) {
     set.seed(random_seed_n)  # FG set random generator seed
-    Lamda[(index_res_var[i]+1):index_res_var[i+1],i] <- runif(num_res_var[i], min = lambda.min, max = lambda.max)
+    Lambda[(index_res_var[i]+1):index_res_var[i+1], i] <- runif(num_res_var[i], min = lambda.min, max = lambda.max)
     random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
   }
-  Lamda.pure <- Lamda
+  Lambda.pure <- Lambda
   ## noise
   set.seed(random_seed_n)  # FG set random generator seed
   error <- matrix(rnorm(pr*n, 0, sd.residual),n,pr)
@@ -108,17 +111,23 @@ rmvCopulaFactorModel <- function(
     # the number of type 1 and 2 impurities
     ni.1 <- round(impurity)
     ni.2 <- impurity - ni.1
-    # type 1: to Lamda
+    # type 1: to Lambda
     if (ni.1 > 0) {
       set.seed(random_seed_n)  # FG set random generator seed
-      Lamda[sample(which(Lamda == 0), ni.1)] <- runif(ni.1, 0.1, 1)
+      update_lambda <- runif(ni.1, 0.1, 1)
+      random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+      set.seed(random_seed_n)  # FG set random generator seed
+      Lambda[sample(which(Lambda == 0), ni.1)] <- update_lambda
       random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
     }
     # type 2: to error
     if (ni.2 > 0){
-      vec <- rep(0, pr*(pr-1)/2)
+      vec <- rep(0, pr * (pr - 1)/2)
       set.seed(random_seed_n)  # FG set random generator seed
-      vec[sample(pr*(pr-1)/2, ni.2)] <- runif(ni.2)
+      update_vec <- runif(ni.2)
+      random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+      set.seed(random_seed_n)  # FG set random generator seed
+      vec[sample(pr * (pr - 1)/2, ni.2)] <- update_vec
       random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
       sigma.error <- diag(pr)
       sigma.error[upper.tri(sigma.error)] <- vec
@@ -129,13 +138,13 @@ rmvCopulaFactorModel <- function(
     }
   }
 
-
   ## generate responsing data
-  Y[,(pl+1):(pl+pr)] <- d_gauss[,index_more] %*% t(Lamda) + error
-
+  Y[, (pl+1):(pl+pr)] <- d_gauss[,index_more] %*% t(Lambda) + error
 
   #### 3. Return
-  list(data = Y[,-(1:pl)], Sigma = sigma, index_more = index_more, Lambda = Lamda.pure)
+  return(
+    list(data = Y[, -(1:pl)], Sigma = sigma, index_more = index_more, Lambda = Lambda.pure)
+  )
 }
 
 single_artificial_generator_data_and_factor <- function(
@@ -144,13 +153,15 @@ single_artificial_generator_data_and_factor <- function(
   lB = 0.1, uB = 1,
   frac_variable_discreet = 0.5,
   range_bin_discreet = 2:5,
+  # range_bin_discreet = 1:4,
   #rmv parameters
   n = 1000,
-  g = NULL,
+  # g = NULL,
   impurity = 0, range.indicators = 3:10, lambda.min = 0.1, lambda.max = 1, sd.residual = 1,
   first_random_seed = 1000,
   random_seed_update_parameter = 10
 ) {
+  stopifnot(min(range_bin_discreet) > 1)
   ## parameters
   # No. of factors
   # factor_n <- 6
@@ -185,39 +196,71 @@ single_artificial_generator_data_and_factor <- function(
     first_random_seed = random_seed_n,
     random_seed_update_parameter = random_seed_update_parameter
   )
+  # list(data = Y[,-(1:pl)], Sigma = sigma, index_more = index_more, Lambda = Lamda.pure)
+  
   random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
   # mapping from latents to response variables
-  Lambda <- (data.obs$Lambda != 0) * 1
+  # Lambda <- (data.obs$Lambda != 0) * 1
+  Lambda <- (data.obs[["Lambda"]] != 0) * 1
   # data in response space (fully Gaussian)
-  Z <- data.obs$data
+  # Z <- data.obs$data
+  Z <- data.obs[["data"]]
+  # Z <- as.data.frame(Z)
+  
   # data in observed space (mixed continuous and ordinal)
   var_n <- ncol(Z)
   Y <- Z
+  # cat(is.data.frame(Z))
+  # cat(is(Z))
+  # cat(class(Z))
+  # cat(mode(Z))
+
   set.seed(random_seed_n)  # FG set random generator seed
   sampleResult <- sample(x = 1:var_n, size = round(var_n * frac_variable_discreet))
   random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
   for (i in sampleResult) {
     set.seed(random_seed_n)  # FG set random generator seed
-    Y[, i] <- matrix(unlist(discretize(Z[, i], nbins = sample(range_bin_discreet, 1))), byrow = FALSE, nrow = n)
+    # TODO understand why now we need to put Z as dataframe
+    # cat(i)
+    nbins = sample(range_bin_discreet + 1, 1) 
+    random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+    # TODO if possible replace with other discretizers, like the ones for data frame
+    Y[, i] <- matrix(unlist(infotheo::discretize(
+          X = Z[, i],
+          disc = "equalfreq", # TODO allow to use "equalwidth" instead, consider using 
+          nbins = nbins
+          )), 
+      byrow = FALSE, nrow = n
+    )
+    # 2.7.1  Equal WidthThe principle of the equal width discretization is to divide[a,b]into|Xi|sub-intervalsof equal size [146, 41, 81]:[a, a+b−a|Xi|[,[a+b−a|Xi|, a+ 2b−a|Xi|[,...[a+(|Xi|−1)(b−a)|Xi|, b+ε[Note that anε >0is added in the last interval in order to include the maximal value inone of the|Xi|bins. This discretization scheme has aO(m)complexity cost.2.7.2  Equal FrequencyThe equal frequency discretization scheme consists in partitioning the interval[a,b]into|Xi|intervals, each having the same number,m/|Xi|, of data points [41, 145, 81]. Asa result, the intervals can have different sizes. If the|Xi|intervals have equal frequency,then the computation of entropy is straightforward:log1|Xi|. However, if one of the binsis more dense than the others, then the resulting entropy needs to be estimated.  Thisdiscretization is reported [146] as one of the most efficient method (combined with thenaive Bayes classifier)
+    
+    # Y[, i] <- matrix(unlist(discretize(as.data.frame(Z[, i]), nbins = sample(range_bin_discreet, 1))), byrow = FALSE, nrow = n)
+    # Y[, i] <- matrix(
+    #   unlist(discretize(as.data.frame(Z[, i]), breaks = sample(range_bin_discreet, 1))),
+    #   byrow = FALSE, nrow = n
+    # )
     random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
   }
   out_ls <- list(
     original_graph = g,
     for_inference = list(Y = Y, Lambda = Lambda),
     generator_parameters = list(
+      # Graph generator
       factor_n = factor_n,
       prob = prob,
       lB = lB,
       uB = uB,
+      # Data generator
       frac_variable_discreet = frac_variable_discreet,
       range_bin_discreet = range_bin_discreet,
       n = n,
-      g = g,
+      # g = g,
       impurity = impurity,
       range.indicators = range.indicators,
       lambda.min = lambda.min,
       lambda.max = lambda.max,
       sd.residual = sd.residual,
+      #
       first_random_seed = first_random_seed,
       random_seed_update_parameter = random_seed_update_parameter
     )
@@ -256,9 +299,10 @@ multi_artificial_generator_data_and_factor <- function(
   lB = 0.1, uB = 1,
   frac_variable_discreet = 0.5,
   range_bin_discreet = 2:5,
+  # range_bin_discreet = 1:4,
   #rmv parameters
   n = 1000,
-  g = NULL,
+  # g = NULL,
   impurity = 0, range.indicators = 3:10, lambda.min = 0.1, lambda.max = 1, sd.residual = 1,
   first_random_seed = 1000,
   random_seed_update_parameter = 10
@@ -275,7 +319,7 @@ multi_artificial_generator_data_and_factor <- function(
       frac_variable_discreet = frac_variable_discreet,
       range_bin_discreet = range_bin_discreet,
       n = n,
-      g = g,
+      # g = g,
       impurity = impurity,
       range.indicators = range.indicators,
       lambda.min = lambda.min,
