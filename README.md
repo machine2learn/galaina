@@ -17,11 +17,12 @@ pip install -r requirements.txt
 ```
 
 #### Local setup
-The path to the `Rscript` executable is hard-coded in line 133 of file `config/config_writer.py`:
-```python
-self.add_item('r_front_end', 'path_r_binary_command', '/usr/local/bin/Rscript')
+The path to the `Rscript` executable is read from the file `meta_config.ini`:
+```ini
+[r_front_end]
+path_r_binary_command = /usr/local/bin/Rscript
 ```
-Please replace the path to the `Rscript` file (which is the last string) according to your `R` installation.
+Please assign the path to your local `Rscript` file to the key `path_r_binary_command` in the `r_front_end` section  of the file `meta_config.ini`.
 
 ### Linux (Ubuntu)
 

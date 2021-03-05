@@ -128,12 +128,16 @@ class ConfigWriter:
         for sec in sections:
             self.load_section(sec)
 
-    def add_r_front_end(self, APP_ROOT):
+    def add_r_front_end(self, APP_ROOT, path_r_binary_command):
         if 'r_front_end' not in self.keys():
-            self.add_item('r_front_end', 'path_r_binary_command', '/usr/local/bin/Rscript')
+            # self.add_item('r_front_end', 'path_r_binary_command', '/usr/local/bin/Rscript')
+            self.add_item('r_front_end', 'path_r_binary_command', path_r_binary_command)
             self.add_item('r_front_end', 'r_binary_options', '--vanilla')
-            self.add_item('r_front_end', 'path_r_last_part_program',
-                          os.path.join(APP_ROOT, 'R_code', '20180725_use_config_ini_final_part.R'))
+            self.add_item(
+                'r_front_end', 'path_r_last_part_program',
+                # os.path.join(APP_ROOT, 'R_code', 'backend_galaina_final_part.R')
+                os.path.join(APP_ROOT, 'R_code', '20180725_use_config_ini_final_part.R')
+            )
             self.add_item('r_front_end', 'path_r_infer_copula_factor_script',
                           os.path.join(APP_ROOT, 'R_code', 'my_inferCopulaFactorModel.R'))
             self.write_config()

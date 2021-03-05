@@ -10,10 +10,21 @@ plot_and_display = 'plot_and_display'
 input_paths_and_related_parameters = 'input_paths_and_related_parameters'
 output_paths = 'output_paths'
 
+r_front_end = 'r_front_end'
+path_r_binary_command = 'path_r_binary_command'
 
 def abs_path_of(rel_path):
     return os.path.join(os.path.dirname(__file__), rel_path)
 
+class CustomMetaConfigParser(configparser.ConfigParser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _from_r_front_end(self, param):
+        return self.get(r_front_end, param)
+    
+    def get_path_r_binary_command(self):
+        return self._from_r_front_end(path_r_binary_command)
 
 class CustomConfigParser(configparser.ConfigParser):
     def __init__(self, *args, **kwargs):
@@ -176,3 +187,13 @@ def read_config(path):
     config = CustomConfigParser(inline_comment_prefixes=['#'], interpolation=configparser.ExtendedInterpolation())
     config.read(path)
     return config
+
+def read_meta_config(path):
+    meta_config = CustomMetaConfigParser(
+        inline_comment_prefixes=['#'],
+        interpolation=configparser.ExtendedInterpolation()
+    )
+    meta_config.read(path)
+    return meta_config
+    # pass
+    # meta_config =

@@ -22,6 +22,9 @@ from utils.parameters_util import check_causal_discovery_ob, set_form
 from utils.sys_utils import delete_configs, delete_dataset
 import python_r_pipeline
 
+from config import config_reader  # FG import CustomMetaConfigParser
+
+
 from werkzeug.datastructures import ImmutableMultiDict
 
 app = Flask(__name__)
@@ -35,6 +38,8 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+path_to_meta_config = os.path.join(APP_ROOT, 'meta_config.ini')  # FG
 
 sess = Session(app)
 
@@ -94,9 +99,13 @@ def run():
             delete_dataset(APP_ROOT, session['user'], dataset)
             return redirect(url_for('upload'))
         path, dataset_name = sess.get_writer().get_info()
-        sess.get_writer().add_r_front_end(APP_ROOT)
-        thread = Thread(target=threaded_function,
-                        args=(sess.get_writer().config, path))
+
+        meta_config = config_reader.read_meta_config(path_to_meta_config)
+        sess.get_writer().add_r_front_end(APP_ROOT, meta_config.get_path_r_binary_command())
+        thread = Thread(
+            target=threaded_function,
+            args=(sess.get_writer().config, path)
+        )
         thread.start()
         thread.join()
     return render_template('run.html', page=2)
