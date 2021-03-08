@@ -291,7 +291,7 @@ if (sys.nframe() == 0) {
   # args <- c("/Users/fabio/projects/aggressotype/code/software/software_demo/config_estonian_restricted_demo_relaxed_less_null.ini")
 
   if (messaging_b) {
-    fileConn <- file("output.txt", 'a')  # TODO get it from config
+    fileConn <- file("output.txt", 'a')
     sink(file = fileConn, append = TRUE, type = 'message')  # future: unset type and use sink for managing output. Modify print_and_append_to_log because it could become redundant
   } else {
     fileConn <- NULL
@@ -312,5 +312,7 @@ if (sys.nframe() == 0) {
   if (messaging_b) {
     sink(type = "message")  # reset message and output sink
     close(fileConn)
+    path_to_log <- config$get(section = "output_paths", option = "output_path_log")
+    file.copy(from = "output.txt", to = path_to_log, overwrite = TRUE)
   }
 }

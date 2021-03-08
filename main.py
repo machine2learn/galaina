@@ -24,7 +24,6 @@ import python_r_pipeline
 
 from config import config_reader  # FG import CustomMetaConfigParser
 
-
 from werkzeug.datastructures import ImmutableMultiDict
 
 app = Flask(__name__)
@@ -87,8 +86,8 @@ def parameters():
     return render_template('parameters.html', form=form, page=1)
 
 
-def threaded_function(writer, path):
-    python_r_pipeline.run(writer, path)
+def threaded_function(writer):
+    python_r_pipeline.run(writer)
 
 
 @app.route('/run', methods=['GET', 'POST'])
@@ -98,13 +97,12 @@ def run():
             _, dataset = sess.get_writer().get_info()
             delete_dataset(APP_ROOT, session['user'], dataset)
             return redirect(url_for('upload'))
-        path, dataset_name = sess.get_writer().get_info()
 
         meta_config = config_reader.read_meta_config(path_to_meta_config)
         sess.get_writer().add_r_front_end(APP_ROOT, meta_config.get_path_r_binary_command())
         thread = Thread(
             target=threaded_function,
-            args=(sess.get_writer().config, path)
+            args=(sess.get_writer().config,)
         )
         thread.start()
         thread.join()
@@ -209,4 +207,6 @@ def create():
 db.init_app(app)
 
 if __name__ == '__main__':
+    # meta_config = config_reader.read_meta_config(path_to_meta_config)
+    # TODO read host and port from meta_config
     app.run(debug=True, host='127.0.0.1', port=5000)

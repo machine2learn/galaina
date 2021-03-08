@@ -70,7 +70,7 @@ class MyConfigReader:
 
     def get_path_to_config_ini(self):
         return self.configparser_obj.get(
-            section="added_section_01", option="path_to_config_ini"
+            section="info", option="config_path"
         )
 
     def get_r_binary_command(self):
@@ -178,7 +178,7 @@ class FactorModelDF(FactorInfo):
         # loading_df = self.factor_df.set_index([self.factor_df.index, 'Factor']).unstack(
         #     level=1).fillna(0.0).astype(float)
         tmp_df = self.factor_df.set_index([self.factor_df.index, 'Factor'])
-        # Preserve variable (row) ordering of factor_df and sort columns in ascending nr of variables assocaited
+        # Preserve variable (row) ordering of factor_df and sort columns in ascending nr of variables associated
         loading_df = tmp_df.pivot_table(
             index='Variable', columns='Factor', values='Loading', fill_value=0.0
         ).astype(float)
@@ -369,7 +369,8 @@ class InfoToDF:
         assert (self.type2factor['factor_model_df'].factor_df.loc[unstructured_variable_index, 'Loading'] == 1).all(), \
             'Some unstructured variables do not have Loading = 1'
         assert (set(self.type2factor['factor_model_df'].factor_df.loc[unstructured_variable_index, 'Factor'].tolist())
-                == set(unstructured_variable_index.tolist())), "Some unstructured variables are not factors of themselves"
+                == set(
+                    unstructured_variable_index.tolist())), "Some unstructured variables are not factors of themselves"
 
         #         assert merged_info2df['factor_loading_df'].factor_df.loc[unstructured_variable_index, unstructured_variable_index]
 
@@ -394,12 +395,11 @@ class InfoToDF:
             "Factor loading columns are different from the factor models"
 
         # Not sure if we should check that singleton factors are variable.
-        factor2count_se = self.type2factor['factor_loading_df'].factor_df.ne(0).sum()  #.sort_values().index
+        factor2count_se = self.type2factor['factor_loading_df'].factor_df.ne(0).sum()  # .sort_values().index
         singleton_factor_ls = factor2count_se[factor2count_se.eq(1)].index.tolist()
         assert set(singleton_factor_ls).issubset(self.type2factor['factor_model_df'].factor_df.index), \
             "Some factors with just one variable associated are not variables themselves"
         # assert self.type2factor['factor_model_df'].factor_df.loc[singleton_factor_ls, 'Factor'].isin(self.type2factor['factor_model_df'].factor_df.index), \
-
 
 
 class ListInfoToDF:
@@ -501,10 +501,26 @@ def create_ls_of_info2df(config):
     return ls_of_info2df
 
 
+# TODO include method/class for creating dummy factor model (unstructured factor model) from input data
+#   Copied from notebook 05
+# def initialize_factor_model(data_df):
+#     return pd.DataFrame(
+#         index=pd.Index(data=data_df.columns, name='Variable'),
+#         columns=['Factor', 'Loading']
+#     )
+#
+#
+# def create_factor_model_for_unstructured_data(data_df):  # could use initialize_factor_model
+#     factor_model_df = initialize_factor_model(data_df)
+#     factor_model_df.loc[factor_model_df.index, 'Factor'] = factor_model_df.index
+#     factor_model_df['Loading'] = 1.0
+#     return factor_model_df
+
 def main(configparser_obj):
     config = MyConfigReader(configparser_obj)
     # , Load input DataFrames
     check_data_factor_number_match(config)
+    # TODO if we don't edit the config file to add dummy latent factor, we'll have to modify create_ls_of_info2df
     ls_of_info2df = create_ls_of_info2df(config)
 
     # . Merge them all
@@ -535,7 +551,7 @@ def main(configparser_obj):
         config.get_output_path_merged_factor_model_table(), sep=config.get_csv_separator(),
     )
 
-    # Continue in R
+    # Continue in R (we also copy the log from output.txt to the file specified in the config INI)
     subprocess.call(
         [
             config.get_r_binary_command(),
@@ -547,15 +563,12 @@ def main(configparser_obj):
     )
 
 
-def run(cfg, path):
-    # Create section with config INI file name and path to R script to be run
-    if 'added_section_01' not in cfg.sections():
-        cfg.add_section("added_section_01")
-        cfg.set(section="added_section_01", option="path_to_config_ini", value=path)
+def run(cfg):
     main(cfg)
 
 
 if __name__ == "__main__":
     cfg = configparser.ConfigParser()
     cfg.read(sys.argv[1])
-    run(cfg, sys.argv[1])
+    assert str(sys.argv[1]) == str(cfg.get_path_to_config_ini()), "Path to config INI is correct"
+    run(cfg)

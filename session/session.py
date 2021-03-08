@@ -15,7 +15,7 @@ class Session:
         # self._config_reader = {}
         self._config = {}
         self._app = app
-        self.log_path = 'output.txt'
+        self.log_path = 'output.txt'  # Later this is copied to the log path specified in the INI
 
     def read_log(self):
         return self.file_pointer.read()
