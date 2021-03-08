@@ -135,8 +135,8 @@ class ConfigWriter:
             self.add_item('r_front_end', 'r_binary_options', '--vanilla')
             self.add_item(
                 'r_front_end', 'path_r_last_part_program',
-                # os.path.join(APP_ROOT, 'R_code', 'backend_galaina_final_part.R')
-                os.path.join(APP_ROOT, 'R_code', '20180725_use_config_ini_final_part.R')
+                os.path.join(APP_ROOT, 'R_code', 'backend_galaina_final_part.R')
+                # os.path.join(APP_ROOT, 'R_code', '20180725_use_config_ini_final_part.R')
             )
             self.add_item('r_front_end', 'path_r_infer_copula_factor_script',
                           os.path.join(APP_ROOT, 'R_code', 'my_inferCopulaFactorModel.R'))

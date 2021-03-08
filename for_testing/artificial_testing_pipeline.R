@@ -15,7 +15,7 @@ library(ConfigParser)
 
 source('./for_testing/artificial_generator_data_and_factor.R')
 
-source( './R_code/20180725_use_config_ini_final_part.R')
+source( './R_code/backend_galaina_final_part.R')
 
 # if (sys.nframe() == 0) {
 # main <- function()
