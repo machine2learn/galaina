@@ -2,7 +2,7 @@
 Galaina is a platform to read data, find probabilistic causal associations, and generate a diagram that shows the causal relationships among the data variables or factors (i.e. group of variables expressing the same hypothetical constructs).
  
 ## Description
-Within the course of the EU project Aggressotype, Machine2Learn BV developed a platform called Galaina to extract probabilistic causal relationships from biological and medical databases that are in tabular format. Using the causal relationships extracted by Galaina, we could identify the variable subtypes, i.e., meaningful grouping of variables (here also called features) present in those databases.
+Within the course of the EU projects Aggressotype and PRIME, Machine2Learn BV developed a platform called Galaina to extract probabilistic causal relationships from biological and medical databases that are in tabular format. Using the causal relationships extracted by Galaina, we could identify the variable subtypes, i.e., meaningful grouping of variables (here also called features) present in those databases.
 
 ## Installation
 
@@ -84,7 +84,7 @@ python main.py
 ```
 ### Access the Internal Web Server
 
-1. Now the internal web-server is active and it can be accessed by a web browser (preferably Chrome or Firefox). The default URL is `http://127.0.0.1:5000/`. 
+1. Now the internal web-server is active, and it can be accessed by a web browser (preferably Chrome or Firefox). The default URL is `http://127.0.0.1:5000/`. 
 1. Sign in with the following credentials:
    * Username: `test`
    * Password: `test12345`
@@ -249,7 +249,7 @@ A `bn.strength` object is an R data frame with the following four columns (one r
     *  A path from `Var01` to `Factor02` with path likelihood 0.8 and direction likelihood 0.6.
     *  A directionless path connecting `Factor02` and `Factor03` with path likelihood 0.6.
 
-    Then the filtered CSV with the structure model is as follow:
+    Then the filtered CSV with the structure model is as follows:
 
 | from     | to       | strength | direction |
 | -------- | -------- | -------- | --------- |
@@ -263,3 +263,4 @@ A `bn.strength` object is an R data frame with the following four columns (one r
 This project has received funding from the European Union's Seventh Framework Programme for research, technological development and demonstration under grant agreement no 602805.
 The research leading to these results has received funding from the European Community's Seventh Framework Programme (FP7/2007-2013) under Grant Agreement no 278948.
 This project is co-funded by the Ambient Assisted Living (AAL) Joint programme, by the German BMBF, the French ANR, the Austrian BMVIT.
+This project has also received funding from the European Union's Horizon 2020 research and innovation programme under Grant Agreement no 847879 ([PRIME](https://prime-study.eu/) — H2020-SC1-BHC-2018-2020 / H2020-SC1-2019-Two-Stage-RTD).
