@@ -47,7 +47,7 @@ install.packages(c("here"))
 ```
 
 
-### MacOS 
+### MacOS
 
 #### Terminal
 Install v8 via Homebrew
@@ -57,18 +57,19 @@ brew install v8
 <!-- brew install v8@3.15 -->
 
 #### R console
-
+Update for R version 4.1.2
 ```r
 install.packages("V8")
-source("http://bioconductor.org/biocLite.R") 
-biocLite("RBGL")
+source("http://bioconductor.org/biocLite.R")
+install.packages("BiocManager")
+BiocManager::install("RBGL")
 install.packages(c("devtools", "dplyr", "shiny", "ggplot2", "tidyr", "caret", "nnet"), dependencies=TRUE)
-install.packages("mvtnorm")
+install.packages(c("mvtnorm"))
 install.packages(c("dagitty", "infotheo", "sbgcop"))
-library(devtools)  # to use install_github
-install_github("cran/BDgraph@2.44")  # Install version 2.44 of BDgraph
-source("http://bioconductor.org/biocLite.R") 
-biocLite("Rgraphviz")  # for visualizing causal discovery results (a graph) 
+install.packages("devtools")
+library(devtools)
+install_github("cran/BDgraph@2.64")
+BiocManager::install("Rgraphviz")
 install.packages(c("latex2exp", "polycor", "pcalg", "gRain", "bnlearn", "ConfigParser", "stringi", "ggplotify"))
 install.packages("here")
 ```
