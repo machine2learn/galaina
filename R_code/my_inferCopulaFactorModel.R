@@ -1,5 +1,4 @@
 # library(here)
-# source(here("R_code/20180725_use_config_ini_final_part.R"))  # Load print_and_append_to_log
 print_and_append_to_log <- function(tmp_log_str_v, fileConn = NULL) {
   cat(tmp_log_str_v)
   if (!is.null(fileConn) & !is.list(fileConn)) {  # I put this not-list confition because in this way it skips also fileConn = list(NULL)
@@ -507,8 +506,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
     # eta <- cbind(eta1, eta2)  # FG We actually don't need to set this variable
 
     ### identification condition
-    ## Original
-
+    ## 1. Original
     if (exist_poly_factor_b) {
       # print_and_append_to_log(c("Impose identification condition", "\n"), fileConn)
       for (j_factor in poly_factor_index) {
@@ -533,7 +531,8 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
         X[, j_factor] <- X[, j_factor] * sign_n  #sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
       }
     }
-    # Method input: X, k2, poly_factor_index, Lambda, rel_sign_orig_Lambda)
+    ## 2. Alternative method (Fabio Gori)
+    ## Function input: (X, k2, poly_factor_index, Lambda, rel_sign_orig_Lambda)
     ## New - written on  20190703
     # # Difference wrt Cui code: now force copula factors to have same signs of input factors
     # # sign( sum(lapply( Lambda[, j] * ,sign)
@@ -559,20 +558,23 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
     #       c("There are ", length(zero_pos_v), "factors with sign_adjustment_factor = 0. Force first non-zero factor loading of each multivar factor to be positive.", "\n"),
     #       fileConn
     #     )
+    #     # Loop version
     #     # for (jj in zero_pos_v) {
     #     #   adjust_v[jj] <- sign(
     #     #     cov(X[, poly_factor_index[jj]], X[, k2 + which(Lambda[, poly_factor_index[jj]] != 0)[1]])
     #     #   )
     #     # }
+    #     # Noloop version
     #     adjust_v[zero_pos_v] <- sign(
     #       cov(X[, poly_factor_index[zero_pos_v]], X[, k2 + which(Lambda[, poly_factor_index[zero_pos_v]] != 0)[1]])
     #     )
     #   }
+    #   # Noloop version
     #   X[, poly_factor_index] <- t(t(X[, poly_factor_index]) * adjust_v)  # multiply each column X[, j] with adjust_v[j]
     # }
     #
     #
-    # Could do some elementwise multiplication and then some rows/columns
+    # Another version - one loop but does not compute adjust_v. Could do some elementwise multiplication and then some rows/columns
     # for (jj in 1:length(poly_factor_index){
     #   X[, poly_factor_index[jj]] <- X[, poly_factor_index[jj]] * sign(dot(rel_sign_orig_Lambda[, poly_factor_index[jj]], sign_cX[jj, ]))
     # }
@@ -917,7 +919,7 @@ infer_covariance_and_graph <- function(
   ))
 }
 
-merge_discovered_graphs <- function(post_bootstrap_processing_param_ls, run2pcalgo_ls) {
+merge_discovered_graphs <- function(post_bootstrap_processing_param_ls, run2pcalgo_ls, fileConn = NULL) {
 
   #TODO double check it is ok when no bootstap is done
   if (!post_bootstrap_processing_param_ls[['perform_bootstrap_b']]) {
@@ -943,8 +945,8 @@ merge_discovered_graphs <- function(post_bootstrap_processing_param_ls, run2pcal
       cpdag = FALSE  # If TRUE the (PDAG of) the equivalence class is used instead of the network structure itself. It should make it easier to identify score-equivalent arcs.
     )
     avg_bn_obj <- averaged.network(
-      strength = bn_strength_obj,
-      nodes = post_bootstrap_processing_param_ls[['factor_names']],
+      strength = bn_strength_obj
+      # nodes = post_bootstrap_processing_param_ls[['factor_names']]
       # nodes = factor_names
     )  # it automatically gets the thresold from bn_strength_obj
 
@@ -1081,7 +1083,8 @@ merge_discovered_graphs <- function(post_bootstrap_processing_param_ls, run2pcal
     # toDotR(G = graph_nel, outDotFile = sub('.pdf', '.gv', tmp_fig))
     # https://github.com/Bioconductor/graph/blob/master/R/TODOT.R
   }
- return(list(
+
+  return(list(
     bn_strength_obj = bn_strength_obj,
     avg_bn_obj = avg_bn_obj,
     out_graph = out_graph  # I think this should be enough
@@ -1122,7 +1125,10 @@ galaina_pipeline <- function(all_param_ls) {
     saveRDS(run2suffstat_ls, file = output_path_suffstat)
   }
   cat('\n')
-  out_ls <- merge_discovered_graphs(post_bootstrap_processing_param_ls, run2pcalgo_ls)
+  out_ls <- merge_discovered_graphs(
+    post_bootstrap_processing_param_ls, run2pcalgo_ls,
+    fileConn = all_infer_param_ls[['fileConn']]
+  )
   dev.off()
   return(out_ls)
 }
