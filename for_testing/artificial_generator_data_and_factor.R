@@ -1,5 +1,5 @@
 ######################################################################################
-# Generate random graph and thne data from those
+# Generate random causal graphs and the data from those
 # Author: Fabio Gori
 ######################################################################################
 
@@ -25,7 +25,7 @@ rmvCopulaFactorModel <- function(
   first_random_seed = 1000,
   random_seed_update_parameter = 10
 ) {
-  # This function aims to generate data from a Gaussian copula factor model
+  # This function aims to generate data and factor loadings from a Gaussian copula factor model
   #   given a graph or a covariance matrix in the latent space.
   #
   # Args:
@@ -104,7 +104,7 @@ rmvCopulaFactorModel <- function(
   Lambda.pure <- Lambda
   ## noise
   set.seed(random_seed_n)  # FG set random generator seed
-  error <- matrix(rnorm(pr*n, 0, sd.residual),n,pr)
+  error <- matrix(rnorm(pr * n, mean = 0, sd.residual), n, pr)
   random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
   ## add some impurities
   if (impurity > 0){
@@ -139,12 +139,14 @@ rmvCopulaFactorModel <- function(
   }
 
   ## generate responsing data
-  Y[, (pl+1):(pl+pr)] <- d_gauss[,index_more] %*% t(Lambda) + error
+  Y[, (pl+1):(pl+pr)] <- d_gauss[, index_more] %*% t(Lambda) + error
 
   #### 3. Return
-  return(
-    list(data = Y[, -(1:pl)], Sigma = sigma, index_more = index_more, Lambda = Lambda.pure)
-  )
+  return(list(
+      data = Y[, -(1:pl)],
+      Sigma = sigma, # index_more = index_more,
+      Lambda = Lambda.pure
+  ))
 }
 
 single_artificial_generator_data_and_factor <- function(
@@ -171,9 +173,7 @@ single_artificial_generator_data_and_factor <- function(
     prob <- 2 / (factor_n - 1)
   }
 
-  #### 1. Simulate Data ####
-
-  ## simulate a DAG
+  ## 1. Simulate a DAG
   # a random DAG, serving as the true DAG in latent space
   random_seed_n <- first_random_seed  # FG for controlling random sampling
   set.seed(random_seed_n)  # FG set random generator seed
@@ -182,7 +182,7 @@ single_artificial_generator_data_and_factor <- function(
 
   # true CPDAG
   # g.cpdag <- dag2cpdag(g)
-  ## generate data
+  ## 2. Generate Lambda and data of Z
   set.seed(random_seed_n)  # FG set random generator seed
 
   data.obs <- rmvCopulaFactorModel(
@@ -197,7 +197,10 @@ single_artificial_generator_data_and_factor <- function(
     random_seed_update_parameter = random_seed_update_parameter
   )
   # list(data = Y[,-(1:pl)], Sigma = sigma, index_more = index_more, Lambda = Lamda.pure)
-  
+
+
+  timestamp_n <- as.numeric(Sys.time())
+  timestamp_str <- format(Sys.time(), "%Y%m%d%H%M%S")
   random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
   # mapping from latents to response variables
   # Lambda <- (data.obs$Lambda != 0) * 1
@@ -206,40 +209,47 @@ single_artificial_generator_data_and_factor <- function(
   # Z <- data.obs$data
   Z <- data.obs[["data"]]
   # Z <- as.data.frame(Z)
-  
-  # data in observed space (mixed continuous and ordinal)
-  var_n <- ncol(Z)
+
+  ## 2. Generate data Y in observed space (mixed continuous and ordinal)
+  disc_method_v <- c("equalfreq", "equalwidth")
+  tot_var_n <- ncol(Z)
   Y <- Z
   # cat(is.data.frame(Z))
   # cat(is(Z))
   # cat(class(Z))
   # cat(mode(Z))
-
+  var2discretize_info <- list()
   set.seed(random_seed_n)  # FG set random generator seed
-  sampleResult <- sample(x = 1:var_n, size = round(var_n * frac_variable_discreet))
+  sampleResult <- sample(x = 1:tot_var_n, size = round(tot_var_n * frac_variable_discreet))
   random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
-  for (i in sampleResult) {
+  for (i_var_n in sampleResult) {
     set.seed(random_seed_n)  # FG set random generator seed
-    # TODO understand why now we need to put Z as dataframe
-    # cat(i)
-    nbins = sample(range_bin_discreet + 1, 1) 
+    # cat(str(i_var_n), "\n")
+    nbins <- sample(range_bin_discreet + 1, size = 1)
     random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
-    # TODO if possible replace with other discretizers, like the ones for data frame
-    Y[, i] <- matrix(unlist(infotheo::discretize(
-          X = Z[, i],
-          disc = "equalfreq", # TODO allow to use "equalwidth" instead, consider using 
-          nbins = nbins
+    disc_type <- sample(disc_method_v, size = 1)
+    random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
+    var2discretize_info[[i_var_n]] <- list(
+      disc = disc_type,
+      nbins = nbins
+    )
+    Y[, i_var_n] <- matrix(unlist(infotheo::discretize(
+          # X = Z[, i_var_n],
+          X = matrix(Z[, i_var_n], n, byrow = TRUE),
+          disc = var2discretize_info[[i_var_n]][['disc']],
+          nbins = var2discretize_info[[i_var_n]][['nbins']]
+          # disc = disc_type,
+          # nbins = nbins
           )), 
       byrow = FALSE, nrow = n
     )
-    # 2.7.1  Equal WidthThe principle of the equal width discretization is to divide[a,b]into|Xi|sub-intervalsof equal size [146, 41, 81]:[a, a+b−a|Xi|[,[a+b−a|Xi|, a+ 2b−a|Xi|[,...[a+(|Xi|−1)(b−a)|Xi|, b+ε[Note that anε >0is added in the last interval in order to include the maximal value inone of the|Xi|bins. This discretization scheme has aO(m)complexity cost.2.7.2  Equal FrequencyThe equal frequency discretization scheme consists in partitioning the interval[a,b]into|Xi|intervals, each having the same number,m/|Xi|, of data points [41, 145, 81]. Asa result, the intervals can have different sizes. If the|Xi|intervals have equal frequency,then the computation of entropy is straightforward:log1|Xi|. However, if one of the binsis more dense than the others, then the resulting entropy needs to be estimated.  Thisdiscretization is reported [146] as one of the most efficient method (combined with thenaive Bayes classifier)
+    # Equal WidthThe principle of the equal width discretization is to divide[a,b]into|Xi|sub-intervalsof equal size [146, 41, 81]:[a, a+b−a|Xi|[,[a+b−a|Xi|, a+ 2b−a|Xi|[,...[a+(|Xi|−1)(b−a)|Xi|, b+ε[Note that anε >0is added in the last interval in order to include the maximal value inone of the|Xi|bins. This discretization scheme has aO(m)complexity cost.2.7.2  Equal FrequencyThe equal frequency discretization scheme consists in partitioning the interval[a,b]into|Xi|intervals, each having the same number,m/|Xi|, of data points [41, 145, 81]. Asa result, the intervals can have different sizes. If the|Xi|intervals have equal frequency,then the computation of entropy is straightforward:log1|Xi|. However, if one of the binsis more dense than the others, then the resulting entropy needs to be estimated.  Thisdiscretization is reported [146] as one of the most efficient method (combined with thenaive Bayes classifier)
     
-    # Y[, i] <- matrix(unlist(discretize(as.data.frame(Z[, i]), nbins = sample(range_bin_discreet, 1))), byrow = FALSE, nrow = n)
-    # Y[, i] <- matrix(
-    #   unlist(discretize(as.data.frame(Z[, i]), breaks = sample(range_bin_discreet, 1))),
+    # Y[, i_var_n] <- matrix(unlist(discretize(as.data.frame(Z[, i_var_n]), nbins = sample(range_bin_discreet, 1))), byrow = FALSE, nrow = n)
+    # Y[, i_var_n] <- matrix(
+    #   unlist(discretize(as.data.frame(Z[, i_var_n]), breaks = sample(range_bin_discreet, 1))),
     #   byrow = FALSE, nrow = n
     # )
-    random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
   }
   out_ls <- list(
     original_graph = g,
@@ -260,10 +270,12 @@ single_artificial_generator_data_and_factor <- function(
       lambda.min = lambda.min,
       lambda.max = lambda.max,
       sd.residual = sd.residual,
+      var2discretize_info = var2discretize_info,
       #
       first_random_seed = first_random_seed,
       random_seed_update_parameter = random_seed_update_parameter
-    )
+    ),
+    timestamp = timestamp_str
   )
   return(out_ls)
 
