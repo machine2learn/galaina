@@ -72,6 +72,9 @@ install_github("cran/BDgraph@2.64")
 BiocManager::install("Rgraphviz")
 install.packages(c("latex2exp", "polycor", "pcalg", "gRain", "bnlearn", "ConfigParser", "stringi", "ggplotify"))
 install.packages("here")
+# For testing
+devtools::install_github("renkun-ken/rlist")
+devtools::install_github("gdemin/comprehenr")
 ```
 
 
@@ -94,6 +97,7 @@ python main.py
 
 ## File formats
 
+The folder `example_data` contains examples of input data files and input factor model files
 ### Input Data
 Galaina accepts as input one or multiple datasets.
 
@@ -257,6 +261,14 @@ A `bn.strength` object is an R data frame with the following four columns (one r
 | Var01    | Factor02 | 0.8      | 0.6       |
 | Factor02 | Factor03 | 0.6      | 0.5       |
 | Factor03 | Factor02 | 0.6      | 0.5       |
+
+##  Testing 
+
+Execute the following command to generate random graph, generate artificial data from those, and then assess Galaina performance in graph reconstruction:
+```bash
+Rscript ./for_testing/artificial_testing_pipeline.R
+```
+The folder `for_testing` contains additional scripts and notebooks for data generation
 
 
 ## Acknowledgement and Disclaimer 
