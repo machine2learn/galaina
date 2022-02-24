@@ -1,0 +1,14 @@
+Variable,Factor,Loading
+age,age,1.0
+sex,sex,1.0
+school,school,1.0
+grade,grade,1.0
+x1,Visual,1.0
+x2,Visual,1.0
+x3,Visual,1.0
+x4,Textual,1.0
+x5,Textual,1.0
+x6,Textual,1.0
+x7,Speed,1.0
+x8,Speed,1.0
+x9,Speed,1.0
