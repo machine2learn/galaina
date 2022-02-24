@@ -1,4 +1,72 @@
 # library(here)
+
+original_identification_condition <- function(X, Lambda, k2, poly_factor_index, k1, fileConn = NULL) {
+  for (j_factor in poly_factor_index) {
+    # FG which(Lambda[, j_factor] != 0)[1] returns a variable, that hence is a number v s.t. 1<=v<=p
+    # FG  since the k1 singleton variable/factors are the first k1 columns of X, we must have that v>=k1
+    # FG  this implies that k2 + v >= k1 + k2 = k and therefore it corresponds to a column variable of X
+    #selected_variable
+    concordance_variable <- which(Lambda[, j_factor] != 0)[1]
+    is_var <- (concordance_variable > k1)
+    stopGeneric(
+      is_var,
+      fileConn,
+      c("Factor", j_factor, "correlation adjustment selected a variable with singleton factor")
+    )
+    sign_n <- sign(cov(X[, j_factor], X[, k2 + concordance_variable]))
+    if (sign_n == 0) {
+      msg_v <-c("Factor", j_factor, "correlation sign adjustment set it to zero")
+      print_and_append_to_log(c(msg_v, "\n"), fileConn)
+      #stopifnot((sign_n != 0))
+      stop(cat(msg_v))
+    }
+    X[, j_factor] <- X[, j_factor] * sign_n  #sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
+  }
+  return(X)
+}
+
+alternative_identification_condition <- function(X, Lambda,k2, poly_factor_index, rel_sign_orig_lambda, fileConn = NULL) {
+  # Difference wrt Cui code: now force copula factors to have same signs of input factors
+  # sign( sum(lapply( Lambda[, j] * ,sign)
+  # cov(X[, j], X[, k2 + which(Lambda[, j] != 0)]))
+  
+  # So X[, j] is my \eta_j as long as j in poly_factor_index
+  # Lambda[i, j] = \gamma_{i, j} is the original factor loading for var i and input factor j
+  # Not sure if it should be extended also to singleton_factor_index that is index of both singleton factors and singleton var
+  # sign_cX <- sign(cov(X))  # I am also computing cov btw poly_factor_index stuff that I won't need
+  # rel_sign_cX <- sign_cX[poly_factor_index, -poly_factor_index]
+
+  rel_sign_cX <- sign(cov(X))[poly_factor_index, -poly_factor_index]  # I just need Cov btw the multi-variable factors and the variables
+  # # We want sign(diag(sign_cX %*% rel_sign_orig_Lambda))
+  # # Because we multiply row j of sign_cX with column j of rel_sign_orig_Lambda
+  # # But this is: for each index
+  adjust_v <- sign(colSums(t(rel_sign_cX) * rel_sign_orig_lambda))
+  # # Could this have some zero elements? In theory if the number of variables for a factor is even, it could be
+  # # Then it is better to edit adjust_v s.t. if it's 0 it is replaced by the original copula sign( cov( X[, j],  X[, k2 + which(Lambda[, j] != 0)[1]] ) )
+  zero_pos_v <- which(adjust_v == 0)
+  if (length(zero_pos_v) > 0) {  # Raise something
+    print_and_append_to_log(
+      c("There are ", length(zero_pos_v), "factors with sign_adjustment_factor = 0. Force first non-zero factor loading of each multivar factor to be positive.", "\n"),
+      fileConn
+    )
+    # Loop version
+    # for (jj in zero_pos_v) {
+    #   adjust_v[jj] <- sign(
+    #     cov(X[, poly_factor_index[jj]], X[, k2 + which(Lambda[, poly_factor_index[jj]] != 0)[1]])
+    #   )
+    # }
+    # Noloop version
+    adjust_v[zero_pos_v] <- sign(cov(
+        X[, poly_factor_index[zero_pos_v]], 
+        X[, k2 + which(Lambda[, poly_factor_index[zero_pos_v]] != 0)[1]]
+      )
+    )
+  }
+  # Enforce copula factor sign consistency with original factors
+  X[, poly_factor_index] <- t(t(X[, poly_factor_index]) * adjust_v)  # multiply each column X[, j] with adjust_v[j]
+  return(X)
+}
+
 print_and_append_to_log <- function(tmp_log_str_v, fileConn = NULL) {
   cat(tmp_log_str_v)
   if (!is.null(fileConn) & !is.list(fileConn)) {  # I put this not-list confition because in this way it skips also fileConn = list(NULL)
@@ -66,8 +134,7 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
                                       # rand.start = F, 
                                       odens = max(1, round(nsamp / 1000)), impute = any(is.na(Y)),
                                       plugin.threshold = 20,
-                                      plugin.marginal = (apply(Y, 2, function(x) {
-                                        length(unique(x)) }) > plugin.threshold),
+                                      plugin.marginal = (apply(Y, 2, function(x) { length(unique(x)) }) > plugin.threshold),
                                       verb = TRUE,
                                       tol = .Machine$double.eps,
                                       first_random_seed = 1000,
@@ -206,12 +273,13 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
   random_seed_n <- update_random_seed(random_seed_n, random_seed_update_parameter)  # FG update random seed
   eta <- cbind(eta1, eta2)
 
+
   # FG  X <- cbind(eta1, eta2, Z2)
   # X = matrix n x (k1 + k2 + (p - k1)) = n x (p + k2)
   # eta1 = matrix n x k1 with transformed data of variables whose factors have single indicators (so 1-2-1 match with variable)
   # eta2 = matrix n x k2 with pseudo-data of factors with multiple indicators
   # Z2  = matrix n x (p - k1) with transformed data of variables whose factors have with multiple indicators
-  # If k1 = 0 there is no eta1
+  # If k1 = 0 there is no eta1 => X = matrix n x (0 + k2 + p) = n x p+k2
   # X = matrix n x (0 + k2 + p) = n x (p + k2)
   X <- cbind(eta, Z2)  # FG so X <- cbind(eta1, eta2, Z2), where if k1 !=0  X <- (Z[, singleton_factor_index], rnorm(n * k2), Z[, -singleton_factor_index])
   X_col_n <- ncol(X)
@@ -509,75 +577,10 @@ my_inferCopulaFactorModel <- function(Y, Lambda = diag(ncol(Y)), trueSigma = NUL
     ## 1. Original
     if (exist_poly_factor_b) {
       # print_and_append_to_log(c("Impose identification condition", "\n"), fileConn)
-      for (j_factor in poly_factor_index) {
-        # FG which(Lambda[, j_factor] != 0)[1] returns a variable, that hence is a number v s.t. 1<=v<=p
-        # FG  since the k1 singleton variable/factors are the first k1 columns of X, we must have that v>=k1
-        # FG  this implies that k2 + v >= k1 + k2 = k and therefore it corresponds to a column variable of X
-        #selected_variable
-        concordance_variable <- which(Lambda[, j_factor] != 0)[1]
-        is_var <- (concordance_variable > k1)
-        stopGeneric(
-          is_var,
-          fileConn,
-          c("Factor", j_factor, "correlation adjustment selected a variable with singleton factor")
-        )
-        sign_n <- sign(cov(X[, j_factor], X[, k2 + concordance_variable]))
-        if (sign_n == 0) {
-          msg_v <-c("Factor", j_factor, "correlation sign adjustment set it to zero")
-          print_and_append_to_log(c(msg_v, "\n"), fileConn)
-          #stopifnot((sign_n != 0))
-          stop(cat(msg_v))
-        }
-        X[, j_factor] <- X[, j_factor] * sign_n  #sign(cov(X[, j], X[, k2 + which(Lambda[, j] != 0)[1]]))
-      }
+      X <- original_identification_condition(X, Lambda, k2, poly_factor_index, k1, fileConn)
+      ## 2. Alternative method (Fabio Gori)
+      # X <- alternative_identification_condition(X, Lambda,k2, poly_factor_index, rel_sign_orig_lambda, fileConn)
     }
-    ## 2. Alternative method (Fabio Gori)
-    ## Function input: (X, k2, poly_factor_index, Lambda, rel_sign_orig_Lambda)
-    ## New - written on  20190703
-    # # Difference wrt Cui code: now force copula factors to have same signs of input factors
-    # # sign( sum(lapply( Lambda[, j] * ,sign)
-    # # cov(X[, j], X[, k2 + which(Lambda[, j] != 0)]))
-    #
-    # # So X[, j] is my \eta_j as long as j in poly_factor_index
-    # # Lambda[i, j] = \gamma_{i, j} is the original factor loading for var i and input factor j
-    # # Not sure if it should be extended also to singleton_factor_index that is index of both singleton factors and singleton var
-    # # sign_cX <- sign(cov(X))  # I am also computing cov btw poly_factor_index stuff that I won't need
-    # # rel_sign_cX <- sign_cX[poly_factor_index, -poly_factor_index]
-    # #
-    # if (k2 > 0) {
-    #   rel_sign_cX <- sign(cov(X))[poly_factor_index, -poly_factor_index]  # I just need Cov btw the multi-variable factors and the variables
-    #   # # We want sign(diag(sign_cX %*% rel_sign_orig_Lambda))
-    #   # # Because we multiply row j of sign_cX with column j of rel_sign_orig_Lambda
-    #   # # But this is: for each index
-    #   adjust_v <- sign(colSums(t(rel_sign_cX) * rel_sign_orig_lambda))
-    #   # # Could this have some zero elements? In theory if the number of variables for a factor is even, it could be
-    #   # # Then it is better to edit adjust_v s.t. if it's 0 it is replaced by the original copula sign( cov( X[, j],  X[, k2 + which(Lambda[, j] != 0)[1]] ) )
-    #   zero_pos_v <- which(adjust_v == 0)
-    #   if (length(zero_pos_v) > 0) {  # Raise something
-    #     print_and_append_to_log(
-    #       c("There are ", length(zero_pos_v), "factors with sign_adjustment_factor = 0. Force first non-zero factor loading of each multivar factor to be positive.", "\n"),
-    #       fileConn
-    #     )
-    #     # Loop version
-    #     # for (jj in zero_pos_v) {
-    #     #   adjust_v[jj] <- sign(
-    #     #     cov(X[, poly_factor_index[jj]], X[, k2 + which(Lambda[, poly_factor_index[jj]] != 0)[1]])
-    #     #   )
-    #     # }
-    #     # Noloop version
-    #     adjust_v[zero_pos_v] <- sign(
-    #       cov(X[, poly_factor_index[zero_pos_v]], X[, k2 + which(Lambda[, poly_factor_index[zero_pos_v]] != 0)[1]])
-    #     )
-    #   }
-    #   # Noloop version
-    #   X[, poly_factor_index] <- t(t(X[, poly_factor_index]) * adjust_v)  # multiply each column X[, j] with adjust_v[j]
-    # }
-    #
-    #
-    # Another version - one loop but does not compute adjust_v. Could do some elementwise multiplication and then some rows/columns
-    # for (jj in 1:length(poly_factor_index){
-    #   X[, poly_factor_index[jj]] <- X[, poly_factor_index[jj]] * sign(dot(rel_sign_orig_Lambda[, poly_factor_index[jj]], sign_cX[jj, ]))
-    # }
 
     # 2019
     #
